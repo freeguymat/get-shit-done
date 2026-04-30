@@ -80,7 +80,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag and push
-        if: ${{ github.ref == 'refs/heads/main' && !inputs.dry_run }}
+        if: ${{ github.ref == 'refs/heads/dev' && !inputs.dry_run }}
         env:
           CANARY_VERSION: ${{ steps.canary.outputs.canary_version }}
         run: |
@@ -88,19 +88,19 @@ jobs:
           git push origin "v${CANARY_VERSION}"
 
       - name: Publish to npm (canary)
-        if: ${{ github.ref == 'refs/heads/main' && !inputs.dry_run }}
+        if: ${{ github.ref == 'refs/heads/dev' && !inputs.dry_run }}
         run: npm publish --provenance --access public --tag canary
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish SDK to npm (canary)
-        if: ${{ github.ref == 'refs/heads/main' && !inputs.dry_run }}
+        if: ${{ github.ref == 'refs/heads/dev' && !inputs.dry_run }}
         run: cd sdk && npm publish --provenance --access public --tag canary
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify publish
-        if: ${{ github.ref == 'refs/heads/main' && !inputs.dry_run }}
+        if: ${{ github.ref == 'refs/heads/dev' && !inputs.dry_run }}
         env:
           CANARY_VERSION: ${{ steps.canary.outputs.canary_version }}
         run: |
