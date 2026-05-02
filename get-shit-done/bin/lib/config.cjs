@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { output, error, CONFIG_DEFAULTS, atomicWriteFileSync } = require('./core.cjs');
+const { output, error, ERROR_REASON, CONFIG_DEFAULTS, atomicWriteFileSync } = require('./core.cjs');
 const { planningDir, withPlanningLock } = require('./planning-workspace.cjs');
 const {
   VALID_PROFILES,
@@ -420,7 +420,7 @@ function cmdConfigGet(cwd, keyPath, raw, defaultValue) {
         output(def, raw, String(def));
         return;
       }
-      error(`Key not found: ${keyPath}`);
+      error(`Key not found: ${keyPath}`, ERROR_REASON.CONFIG_KEY_NOT_FOUND);
     }
     current = current[key];
   }
@@ -432,7 +432,7 @@ function cmdConfigGet(cwd, keyPath, raw, defaultValue) {
       output(def, raw, String(def));
       return;
     }
-    error(`Key not found: ${keyPath}`);
+    error(`Key not found: ${keyPath}`, ERROR_REASON.CONFIG_KEY_NOT_FOUND);
   }
 
   // Never echo plaintext for sensitive keys via config-get. Plaintext lives
