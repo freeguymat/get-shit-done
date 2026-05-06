@@ -4,7 +4,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { escapeRegex, normalizePhaseName, planningPaths, withPlanningLock, output, error, findPhaseInternal, stripShippedMilestones, extractCurrentMilestone, replaceInCurrentMilestone, phaseTokenMatches, atomicWriteFileSync } = require('./core.cjs');
+const { escapeRegex, normalizePhaseName, output, error, findPhaseInternal, stripShippedMilestones, extractCurrentMilestone, replaceInCurrentMilestone, phaseTokenMatches, atomicWriteFileSync } = require('./core.cjs');
+const { planningPaths, withPlanningLock } = require('./planning-workspace.cjs');
 
 /**
  * Coerce an arbitrary YAML scalar/object into a string for cross-cutting
@@ -33,6 +34,37 @@ function coerceTruthToString(t) {
     }
   }
   return '';
+}
+
+function countPhasePlansAndSummaries(phaseDir) {
+  const phaseFiles = fs.readdirSync(phaseDir);
+  // Canonical form: *-PLAN.md or PLAN.md.
+  // Extended form: {N}-PLAN-{NN}-{slug}.md — the layout gsd-plan-phase
+  // actually writes (e.g. 5-PLAN-01-setup.md). Mirrors the looksLikePlanFile
+  // logic in phase.cjs (#2893 / #3128).
+  const PLAN_OUTLINE_RE = /-PLAN-OUTLINE\.md$/i;
+  const PLAN_PRE_BOUNCE_RE = /-PLAN.*\.pre-bounce\.md$/i;
+  const isPlanFile = (f) =>
+    (f.endsWith('-PLAN.md') || f === 'PLAN.md') ||
+    (/\.md$/i.test(f) && /PLAN/i.test(f) && !PLAN_OUTLINE_RE.test(f) && !PLAN_PRE_BOUNCE_RE.test(f));
+  const rootPlans = phaseFiles.filter(isPlanFile);
+  const rootSummaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+
+  let nestedPlans = [];
+  let nestedSummaries = [];
+  const plansDir = path.join(phaseDir, 'plans');
+  if (fs.existsSync(plansDir)) {
+    const planFiles = fs.readdirSync(plansDir);
+    nestedPlans = planFiles.filter(f => /^PLAN-\d+.*\.md$/i.test(f));
+    nestedSummaries = planFiles.filter(f => /^SUMMARY-\d+.*\.md$/i.test(f));
+  }
+
+  return {
+    planCount: rootPlans.length + nestedPlans.length,
+    summaryCount: rootSummaries.length + nestedSummaries.length,
+    hasContext: phaseFiles.some(f => f.endsWith('-CONTEXT.md') || f === 'CONTEXT.md'),
+    hasResearch: phaseFiles.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md'),
+  };
 }
 
 /**
@@ -205,11 +237,11 @@ function cmdRoadmapAnalyze(cwd, raw) {
       const dirMatch = _phaseDirNames.find(d => phaseTokenMatches(d, normalized));
 
       if (dirMatch) {
-        const phaseFiles = fs.readdirSync(path.join(phasesDir, dirMatch));
-        planCount = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md').length;
-        summaryCount = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md').length;
-        hasContext = phaseFiles.some(f => f.endsWith('-CONTEXT.md') || f === 'CONTEXT.md');
-        hasResearch = phaseFiles.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md');
+        const counts = countPhasePlansAndSummaries(path.join(phasesDir, dirMatch));
+        planCount = counts.planCount;
+        summaryCount = counts.summaryCount;
+        hasContext = counts.hasContext;
+        hasResearch = counts.hasResearch;
 
         if (summaryCount >= planCount && planCount > 0) diskStatus = 'complete';
         else if (summaryCount > 0) diskStatus = 'partial';

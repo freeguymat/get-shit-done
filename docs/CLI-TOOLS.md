@@ -45,7 +45,10 @@ Use this when authoring workflows, not when you only need the command list below
 
 **2. TypeScript — `@gsd-build/sdk` (`GSDTools`, `createRegistry`)**
 
-- `GSDTools` (used by `PhaseRunner`, `InitRunner`, and `GSD.createTools()`) always shells out to `gsd-tools.cjs` via `execFile` — there is no in-process registry path on this class. For typed, in-process dispatch use `createRegistry()` from `sdk/src/query/index.ts`, or invoke `gsd-sdk query` (see [QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md)).
+- `GSDTools` now routes through the **SDK Runtime Bridge Module** (`sdk/src/query-runtime-bridge.ts`). Native registry dispatch is preferred; subprocess fallback is explicit policy (`allowFallbackToSubprocess`) and can be disabled for strict SDK-only execution.
+- `strictSdk` mode fails fast when a command has no native adapter, making SDK publish/readiness checks deterministic.
+- Structured bridge observability is available via `onDispatchEvent` (dispatch mode, fallback reason, duration, outcome, error kind).
+- For direct typed dispatch without `GSDTools`, use `createRegistry()` from `sdk/src/query/index.ts`, or invoke `gsd-sdk query` (see [QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md)).
 - Conventions: mutation event wiring, `GSDError` vs `{ data: { error } }`, locks, and stubs — [QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md).
 
 **CJS → SDK examples (same project directory):**
@@ -59,7 +62,7 @@ Use this when authoring workflows, not when you only need the command list below
 | `node gsd-tools.cjs roadmap analyze`     | `gsd-sdk query roadmap analyze`      |
 
 
-**SDK state reads:** `gsd-sdk query state json` / `state.json` and `gsd-sdk query state load` / `state.load` currently share one native handler (rebuilt STATE.md frontmatter — CJS `cmdStateJson`). The legacy CJS `state load` payload (`config`, `state_raw`, existence flags) is still **CLI-only** via `node …/gsd-tools.cjs state load` until a separate registry handler exists. Full routing and golden rules: [QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md).
+**SDK state reads:** `state.json` and `state.load` are both registered query handlers with parity coverage. You can invoke them through `gsd-sdk query …` and through the SDK Runtime Bridge (`GSDTools` → `sdk/src/query-runtime-bridge.ts`), honoring `allowFallbackToSubprocess` / `strictSdk` and emitting `onDispatchEvent` observability. For direct typed dispatch, use `createRegistry()` from `sdk/src/query/index.ts`. Full routing and golden rules: [QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md).
 
 **CLI-only (not in registry):** e.g. **graphify**, **from-gsd2** / **gsd2-import** — call `gsd-tools.cjs` until registered.
 
@@ -250,7 +253,14 @@ node gsd-tools.cjs validate consistency
 
 # Check .planning/ integrity, optionally repair
 node gsd-tools.cjs validate health [--repair]
+
+# Probe context-window utilization for status-line / hook callers (v1.40.0)
+node gsd-tools.cjs validate context
 ```
+
+`validate context` emits a structured envelope with `utilization`, `status`
+(`ok` / `warn` / `critical` at the 60 % / 70 % thresholds), and a
+`suggestion` string. The same data backs `/gsd-health --context`.
 
 ---
 
@@ -452,9 +462,10 @@ User-facing entry point: `/gsd-graphify` (see [Command Reference](COMMANDS.md#gs
 
 | Module | File | Exports |
 |--------|------|---------|
-| Core | `lib/core.cjs` | `error()`, `output()`, `parseArgs()`, shared utilities |
+| Core | `lib/core.cjs` | `error()`, `output()`, `parseArgs()`, shared utilities, compatibility re-exports |
 | State | `lib/state.cjs` | All `state` subcommands, `state-snapshot` |
 | Phase | `lib/phase.cjs` | Phase CRUD, `find-phase`, `phase-plan-index`, `phases list` |
+| Planning Workspace | `lib/planning-workspace.cjs` | Planning seam: `planningDir`, `planningPaths`, active workstream routing, `.planning/.lock` |
 | Roadmap | `lib/roadmap.cjs` | Roadmap parsing, phase extraction, progress updates |
 | Config | `lib/config.cjs` | Config read/write, section initialization |
 | Verify | `lib/verify.cjs` | All verification and validation commands |
@@ -471,7 +482,7 @@ User-facing entry point: `/gsd-graphify` (see [Command Reference](COMMANDS.md#gs
 | Learnings | `lib/learnings.cjs` | Extract learnings from phases/SUMMARY artifacts (backs `/gsd-extract-learnings`) |
 | Audit | `lib/audit.cjs` | Phase/milestone audit queue handlers; `audit-open` helper |
 | GSD2 Import | `lib/gsd2-import.cjs` | Reverse-migration importer from GSD-2 projects (backs `/gsd-from-gsd2`) |
-| Intel | `lib/intel.cjs` | Queryable codebase intelligence index (backs `/gsd-intel`) |
+| Intel | `lib/intel.cjs` | Queryable codebase intelligence index (backs `/gsd-map-codebase --query`) |
 
 ---
 
@@ -498,4 +509,4 @@ API keys configured via `/gsd-settings-integrations` (`brave_search`, `firecrawl
 
 - [sdk/src/query/QUERY-HANDLERS.md](../sdk/src/query/QUERY-HANDLERS.md) — registry matrix, routing, golden parity, intentional CJS differences
 - [Architecture](ARCHITECTURE.md) — where `gsd-sdk query` fits in orchestration
-- [Command Reference](COMMANDS.md) — user-facing `/gsd:` commands
+- [Command Reference](COMMANDS.md) — user-facing `/gsd-` commands

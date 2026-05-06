@@ -89,6 +89,11 @@ Use this instead of manually reading/parsing ROADMAP.md.
   </step>
 
 <step name="report">
+> ⚠️ Context authority: PROJECT.md, STATE.md, and ROADMAP.md are the authoritative sources
+> for project name, milestone, current phase, and next-step routing. CLAUDE.md ## Project
+> blocks are a secondary config aid that may be significantly stale — do NOT use the
+> CLAUDE.md project description as a source for any progress report field.
+
 **Generate progress bar from `gsd-sdk query progress` / `progress.json`, then present rich status report:**
 
 ```bash
@@ -123,7 +128,7 @@ CONTEXT: [✓ if has_context | - if not]
 - [e.g. jq -r '.blockers[].text' from state-snapshot]
 
 ## Pending Todos
-- [count] pending — /gsd-check-todos to review
+- [count] pending — /gsd-capture --list to review
 
 ## Active Debug Sessions
 - [count] active — /gsd-debug to continue
@@ -299,7 +304,7 @@ PHASE_HAS_UI=$(echo "$PHASE_SECTION" | grep -qi "UI hint.*yes" && echo "true" ||
 **Also available:**
 - `/gsd-ui-phase {phase}` — generate UI design contract (recommended for frontend phases)
 - `/gsd-plan-phase {phase}` — skip discussion, plan directly
-- `/gsd-list-phase-assumptions {phase}` — see Claude's assumptions
+- `/gsd-discuss-phase {phase}` — include assumptions check before planning
 
 ---
 ```
@@ -321,7 +326,7 @@ PHASE_HAS_UI=$(echo "$PHASE_SECTION" | grep -qi "UI hint.*yes" && echo "true" ||
 
 **Also available:**
 - `/gsd-plan-phase {phase} ${GSD_WS}` — skip discussion, plan directly
-- `/gsd-list-phase-assumptions {phase} ${GSD_WS}` — see Claude's assumptions
+- `/gsd-discuss-phase {phase} ${GSD_WS}` — include assumptions check before planning
 
 ---
 ```
