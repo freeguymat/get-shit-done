@@ -8,19 +8,27 @@ const path = require('path');
 
 const WORKFLOW = path.join(__dirname, '..', 'get-shit-done', 'workflows', 'stats.md');
 
+function parseStatsContract(content) {
+  const lines = content.split(/\r?\n/);
+  const lowerLines = lines.map(line => line.toLowerCase());
+  return {
+    hasMvpSummaryLanguage: lowerLines.some(line => line.includes('mvp') && line.includes('phase')),
+    referencesModeField: lowerLines.some(line => line.includes('mode')),
+    usesRoadmapAnalyze: lowerLines.some(line => line.includes('roadmap.analyze')),
+    normalizesAnalyzeAtFile: lowerLines.some(line => line.includes('analyze') && line.includes('@file:')),
+  };
+}
+
 describe('stats — MVP mode summary', () => {
-  const content = fs.readFileSync(WORKFLOW, 'utf-8');
+  const contract = parseStatsContract(fs.readFileSync(WORKFLOW, 'utf-8'));
 
   test('workflow includes MVP phase count summary', () => {
-    assert.match(content, /MVP/, 'must mention MVP in summary');
-    assert.match(content, /mode/i, 'must reference mode field');
+    assert.ok(contract.hasMvpSummaryLanguage, 'must mention MVP in summary');
+    assert.ok(contract.referencesModeField, 'must reference mode field');
   });
 
   test('uses roadmap.analyze to count MVP phases', () => {
-    assert.match(
-      content,
-      /roadmap[^\n]*analyze|analyze[^\n]*mode/i,
-      'must consult roadmap.analyze (which surfaces mode per phase from Phase 1)'
-    );
+    assert.ok(contract.usesRoadmapAnalyze, 'must consult roadmap.analyze');
+    assert.ok(contract.normalizesAnalyzeAtFile, 'must normalize @file indirection before jq');
   });
 });

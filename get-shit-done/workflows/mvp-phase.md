@@ -40,13 +40,24 @@ PHASE_NAME=$(echo "$PHASE_INFO" | jq -r '.phase_name')
 PHASE_GOAL=$(echo "$PHASE_INFO" | jq -r '.goal')
 PHASE_MODE=$(echo "$PHASE_INFO" | jq -r '.mode // ""')
 PHASE_COMPLETE=$(echo "$PHASE_INFO" | jq -r '.roadmap_complete // false')
+
+ANALYZE=$(gsd-sdk query roadmap.analyze)
+if [[ "$ANALYZE" == @file:* ]]; then ANALYZE=$(cat "${ANALYZE#@file:}"); fi
+DISK_STATUS=$(echo "$ANALYZE" | jq -r --arg p "$PHASE" '.phases[] | select((.phase_number|tostring)==$p) | .disk_status' | head -1)
+if [[ "$DISK_STATUS" == "complete" || "$PHASE_COMPLETE" == "true" ]]; then
+  STATUS="completed"
+elif [[ "$DISK_STATUS" == "planned" || "$DISK_STATUS" == "partial" ]]; then
+  STATUS="in_progress"
+else
+  STATUS="not_started"
+fi
 ```
 
 If `PHASE_FOUND` is `false`: error and exit. Suggest `/gsd add-phase` or `/gsd insert-phase` to create the phase first.
 
 **Status guard.** If the phase is `in_progress` (has plans but not complete) or `completed`, refuse unless `--force` is in `$ARGUMENTS`:
 
-```
+```text
 ERROR: Phase ${PHASE} is currently ${STATUS}.
 Converting an active or completed phase to MVP mode mid-flight will
 invalidate any existing plans and summaries.
