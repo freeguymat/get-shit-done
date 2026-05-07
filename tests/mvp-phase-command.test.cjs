@@ -71,11 +71,15 @@ describe('/gsd mvp-phase command frontmatter', () => {
     assert.ok(contract.argumentHint.toLowerCase().includes('phase'));
   });
 
-  test('allowed-tools includes Read, Write, Bash, Task, AskUserQuestion', () => {
+  test('allowed-tools includes Read, Write, Bash, (Task or Agent), AskUserQuestion', () => {
     const contract = parseCommandContract(fs.readFileSync(CMD, 'utf-8'));
-    for (const tool of ['Read', 'Write', 'Bash', 'Task', 'AskUserQuestion']) {
+    for (const tool of ['Read', 'Write', 'Bash', 'AskUserQuestion']) {
       assert.ok(contract.allowedTools.includes(tool), `allowed-tools must include ${tool}`);
     }
+    assert.ok(
+      contract.allowedTools.includes('Task') || contract.allowedTools.includes('Agent'),
+      'allowed-tools must include Task or Agent for delegation'
+    );
   });
 
   test('execution_context points to the workflow file', () => {
