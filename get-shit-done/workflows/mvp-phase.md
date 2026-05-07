@@ -21,7 +21,7 @@ Guide the user through MVP-mode planning for a phase. Prompts for an "As a / I w
 Extract the phase number from `$ARGUMENTS` (integer or decimal like `2.1`). Optional flag: `--force` (allow operating on `in_progress` / `completed` phases).
 
 If no argument:
-```
+```text
 ERROR: Phase number required
 Usage: /gsd mvp-phase <phase-number>
 Example: /gsd mvp-phase 1
@@ -43,7 +43,11 @@ PHASE_COMPLETE=$(echo "$PHASE_INFO" | jq -r '.roadmap_complete // false')
 
 ANALYZE=$(gsd-sdk query roadmap.analyze)
 if [[ "$ANALYZE" == @file:* ]]; then ANALYZE=$(cat "${ANALYZE#@file:}"); fi
-DISK_STATUS=$(echo "$ANALYZE" | jq -r --arg p "$PHASE" '.phases[] | select((.phase_number|tostring)==$p) | .disk_status' | head -1)
+DISK_STATUS=$(echo "$ANALYZE" | jq -r --arg p "$PHASE" '
+  .phases[]
+  | select((.phase_number|tonumber) == ($p|tonumber))
+  | .disk_status
+' | head -1)
 if [[ "$DISK_STATUS" == "complete" || "$PHASE_COMPLETE" == "true" ]]; then
   STATUS="completed"
 elif [[ "$DISK_STATUS" == "planned" || "$DISK_STATUS" == "partial" ]]; then
@@ -89,7 +93,7 @@ Run three sequential `AskUserQuestion` calls. Each is free-text. After all three
 
 Assemble:
 
-```
+```text
 USER_STORY="As a ${ROLE}, I want to ${CAPABILITY}, so that ${OUTCOME}."
 ```
 

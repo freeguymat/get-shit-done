@@ -16,25 +16,45 @@ const WORKFLOW = path.join(__dirname, '..', 'get-shit-done', 'workflows', 'mvp-p
 
 function parseMvpPhaseContract(content) {
   const lines = content.split(/\r?\n/);
-  const lowerLines = lines.map(line => line.toLowerCase());
-  const askCount = lowerLines.filter(line => line.includes('askuserquestion') || line.includes('vscode_askquestions')).length;
-  const spidrStepIndex = lowerLines.findIndex(line => line.includes('## 4. spidr splitting check'));
-  const planPhaseStepIndex = lowerLines.findIndex(line => line.includes('## 7. delegate to /gsd plan-phase'));
+  const sections = [];
+  let current = null;
+  for (const raw of lines) {
+    const heading = raw.match(/^##\s+(.+)$/);
+    if (heading) {
+      current = { title: heading[1].trim().toLowerCase(), body: [] };
+      sections.push(current);
+      continue;
+    }
+    if (current) current.body.push(raw);
+  }
+
+  const sectionByTitle = new Map(sections.map(s => [s.title, s]));
+  const askCount = sections.reduce(
+    (sum, s) => sum + s.body.filter(line => /askuserquestion|vscode_askquestions/i.test(line)).length,
+    0,
+  );
+  const spidrStepIndex = sections.findIndex(s => s.title === '4. spidr splitting check');
+  const planPhaseStepIndex = sections.findIndex(s => s.title === '7. delegate to /gsd plan-phase');
+  const statusSection = sectionByTitle.get('2. validate phase exists and check status');
+  const promptsSection = sectionByTitle.get('3. user story prompts');
+  const writeSection = sections.find(s => s.title.includes('roadmap'));
+  const delegateSection = sectionByTitle.get('7. delegate to /gsd plan-phase');
 
   return {
-    hasStatusGuard: lowerLines.some(line => line.includes('in_progress') || line.includes('completed')),
-    hasForceOverride: lowerLines.some(line => line.includes('--force') || line.includes('status guard')),
-    hasAsA: lowerLines.some(line => line.includes('as a')),
-    hasIWantTo: lowerLines.some(line => line.includes('i want to')),
-    hasSoThat: lowerLines.some(line => line.includes('so that')),
+    hasStatusGuard: Boolean(statusSection && /in_progress|completed/i.test(statusSection.body.join('\n'))),
+    hasForceOverride: Boolean(statusSection && /--force|status guard/i.test(statusSection.body.join('\n'))),
+    hasAsA: Boolean(promptsSection && /\bAs a\b/i.test(promptsSection.body.join('\n'))),
+    hasIWantTo: Boolean(promptsSection && /\bI want to\b/i.test(promptsSection.body.join('\n'))),
+    hasSoThat: Boolean(promptsSection && /\bSo that\b/i.test(promptsSection.body.join('\n'))),
     askCount,
-    hasSpidrReference: lowerLines.some(line => line.includes('spidr-splitting.md')),
-    hasModeLine: lowerLines.some(line => line.includes('**mode:** mvp')),
-    hasGoalLine: lowerLines.some(line => line.includes('**goal:**')),
-    hasRoadmapReference: lowerLines.some(line => line.includes('roadmap.md')),
+    hasSpidrReference: Boolean(sectionByTitle.get('4. spidr splitting check') && /spidr-splitting\.md/i.test(sectionByTitle.get('4. spidr splitting check').body.join('\n'))),
+    hasModeLine: Boolean(writeSection && /\*\*Mode:\*\*\s*mvp/i.test(writeSection.body.join('\n'))),
+    hasGoalLine: Boolean(writeSection && /\*\*Goal:\*\*/i.test(writeSection.body.join('\n'))),
+    hasRoadmapReference: Boolean(writeSection && /ROADMAP\.md/.test(writeSection.body.join('\n'))),
     spidrStepIndex,
     planPhaseStepIndex,
-    hasUserStoryTemplateRef: lowerLines.some(line => line.includes('user-story-template.md')),
+    hasUserStoryTemplateRef: Boolean(promptsSection && /user-story-template\.md/i.test(promptsSection.body.join('\n'))),
+    hasPlanPhaseCommandRef: Boolean(delegateSection && /\/gsd plan-phase/i.test(delegateSection.body.join('\n'))),
   };
 }
 
@@ -65,6 +85,7 @@ describe('mvp-phase workflow', () => {
   });
 
   test('delegates to /gsd plan-phase after ROADMAP write', () => {
+    assert.ok(contract.hasPlanPhaseCommandRef, 'plan-phase command reference must be present');
     assert.ok(contract.planPhaseStepIndex >= 0, 'plan-phase delegation step must be present');
     assert.ok(contract.spidrStepIndex >= 0, 'SPIDR check step must be present');
     assert.ok(contract.planPhaseStepIndex > contract.spidrStepIndex, 'plan-phase delegation must come AFTER SPIDR check');
