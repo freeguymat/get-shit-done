@@ -40,6 +40,9 @@ Module owning command resolution, policy projection (`mutation`, `output_mode`),
 ### Query Pre-Project Config Policy Module
 Module policy that defines query-time behavior when `.planning/config.json` is absent: use built-in defaults for parity-sensitive query Interfaces, and emit parity-aligned empty model ids for pre-project model resolution surfaces.
 
+### SDK Package Seam Module
+Module owning the publishable Interface between `@gsd-build/sdk` and `get-shit-done-cc`, including dependency direction, asset ownership, and legacy compatibility policy. Rule: SDK-supported behavior must not reach into parent-package internals except through an explicit compatibility Adapter. Embedded consumption inside the root package is transitional, not the long-term Interface.
+
 ### MVP Mode
 Phase-level planning mode that frames work as a vertical slice (UI → API → DB) of one user-visible capability instead of horizontal layers. Resolved at workflow init via the precedence chain: `--mvp` CLI flag → ROADMAP.md `**Mode:** mvp` field → `workflow.mvp_mode` config → false. All-or-nothing per phase (PRD #2826 Q1). Surfaced as `MVP_MODE=true|false` to the planner, executor, verifier, and discovery surfaces (progress, stats, graphify). Canonical parser: `roadmap.cjs` `**Mode:**` field; canonical resolution chain documented in `workflows/plan-phase.md`. Concept index: `references/mvp-concepts.md`.
 
