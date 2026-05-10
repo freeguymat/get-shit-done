@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-09",
+  "generated": "2026-05-10",
   "families": {
     "agents": [
       "gsd-advisor-researcher",
@@ -296,6 +296,7 @@
       "security.cjs",
       "state-command-router.cjs",
       "state-document.cjs",
+      "state-transaction.cjs",
       "state.cjs",
       "template.cjs",
       "uat.cjs",

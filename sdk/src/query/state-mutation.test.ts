@@ -76,6 +76,11 @@ async function setupTestProject(tmpDir: string, stateContent?: string): Promise<
 // ─── Import tests ───────────────────────────────────────────────────────────
 
 describe('state-mutation imports', () => {
+  it('exports STATE.md mutation transaction Interface', async () => {
+    const mod = await import('./state-transaction.js');
+    expect(typeof mod.runStateMutationTransaction).toBe('function');
+  });
+
   it('exports stateUpdate handler', async () => {
     const mod = await import('./state-mutation.js');
     expect(typeof mod.stateUpdate).toBe('function');

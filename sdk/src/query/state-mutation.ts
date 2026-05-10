@@ -35,6 +35,7 @@ import {
 } from './helpers.js';
 import { buildStateFrontmatter, getMilestonePhaseFilter } from './state.js';
 import { stateExtractField, stateReplaceField, stateReplaceFieldWithFallback } from './state-document.js';
+import { runStateMutationTransaction } from './state-transaction.js';
 import type { QueryHandler } from './utils.js';
 
 const PROGRESS_FRONTMATTER_FIELDS = new Set(['Progress', 'Total Plans in Phase', 'Total Phases']);
@@ -230,35 +231,23 @@ async function readModifyWriteStateMd(
 ): Promise<string> {
   const statePath = planningPaths(projectDir, workstream).state;
   const resync = options.resync !== false;
-  const lockPath = await acquireStateLock(statePath);
-  try {
-    let content: string;
-    try {
-      content = await readFile(statePath, 'utf-8');
-    } catch {
-      content = '';
-    }
-    // Strip frontmatter before passing to modifier so that regex replacements
-    // operate on body fields only (not on YAML frontmatter keys like 'status:').
-    // syncStateFrontmatter rebuilds frontmatter from the modified body + disk.
-    const preFm = extractFrontmatter(content);
-    const body = stripFrontmatter(content);
-    const modified = await modifier(body);
-    let synced = await syncStateFrontmatter(modified, projectDir, workstream, {
-      preserveExistingProgress: options.preserveExistingProgress,
-    });
-    if (!resync && preFm && preFm.progress) {
-      const postFm = extractFrontmatter(synced);
-      postFm.progress = preFm.progress;
-      const yamlStr = reconstructFrontmatter(postFm);
-      synced = `---\n${yamlStr}\n---\n\n${stripFrontmatter(synced)}`;
-    }
-    const normalized = normalizeMd(synced);
-    await writeFile(statePath, normalized, 'utf-8');
-    return normalized;
-  } finally {
-    await releaseStateLock(lockPath);
-  }
+  return runStateMutationTransaction({
+    statePath,
+    projectDir,
+    workstream,
+    transform: modifier,
+    acquireStateLock,
+    releaseStateLock,
+    syncStateFrontmatter,
+    normalizeMd,
+    writeFile,
+    extractFrontmatter,
+    stripFrontmatter,
+    reconstructFrontmatter,
+    resync,
+    preserveExistingProgress: options.preserveExistingProgress,
+    mutationSurface: 'body',
+  });
 }
 
 /**
@@ -272,20 +261,21 @@ export async function readModifyWriteStateMdFull(
   workstream?: string,
 ): Promise<void> {
   const statePath = planningPaths(projectDir, workstream).state;
-  const lockPath = await acquireStateLock(statePath);
-  try {
-    let content = '';
-    try {
-      content = await readFile(statePath, 'utf-8');
-    } catch {
-      /* missing */
-    }
-    const modified = await modifier(content);
-    const synced = await syncStateFrontmatter(modified, projectDir, workstream);
-    await writeFile(statePath, normalizeMd(synced), 'utf-8');
-  } finally {
-    await releaseStateLock(lockPath);
-  }
+  await runStateMutationTransaction({
+    statePath,
+    projectDir,
+    workstream,
+    transform: modifier,
+    acquireStateLock,
+    releaseStateLock,
+    syncStateFrontmatter,
+    normalizeMd,
+    writeFile,
+    extractFrontmatter,
+    stripFrontmatter,
+    reconstructFrontmatter,
+    mutationSurface: 'full',
+  });
 }
 
 // ─── Exported handlers ────────────────────────────────────────────────────

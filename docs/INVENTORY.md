@@ -358,7 +358,7 @@ The `gsd-planner` agent is decomposed into a core agent plus reference modules t
 
 ---
 
-## CLI Modules (50 shipped)
+## CLI Modules (51 shipped)
 
 Full listing: `get-shit-done/bin/lib/*.cjs`.
 
@@ -405,6 +405,7 @@ Full listing: `get-shit-done/bin/lib/*.cjs`.
 | `state-command-router.cjs` | Thin CJS subcommand router adapter for `gsd-tools state` |
 | `state.cjs` | STATE.md parsing, updating, progression, metrics |
 | `state-document.cjs` | Pure STATE.md field extraction, replacement, status normalization, and progress calculation transforms |
+| `state-transaction.cjs` | Transaction policy for STATE.md mutation: lock, read, transform, frontmatter sync, progress preservation, atomic write |
 | `template.cjs` | Template selection and filling with variable substitution |
 | `uat.cjs` | UAT file parsing, verification debt tracking, audit-uat support |
 | `validate-command-router.cjs` | Thin CJS subcommand router adapter for `gsd-tools validate` |

@@ -8,6 +8,7 @@ const { escapeRegex, loadConfig, getMilestoneInfo, getMilestonePhaseFilter, norm
 const { planningDir, planningPaths } = require('./planning-workspace.cjs');
 const { extractFrontmatter, reconstructFrontmatter } = require('./frontmatter.cjs');
 const scanPhasePlans = require('./plan-scan.cjs');
+const { runStateMutationTransaction } = require('./state-transaction.cjs');
 const {
   computeProgressPercent,
   normalizeProgressNumbers,
@@ -999,33 +1000,22 @@ function writeStateMd(statePath, content, cwd) {
  *   the pre-transform file rather than being rebuilt from disk.
  */
 function readModifyWriteStateMd(statePath, transformFn, cwd, options) {
-  const resync = !options || options.resync !== false;
-  const lockPath = acquireStateLock(statePath);
-  try {
-    const content = fs.existsSync(statePath) ? fs.readFileSync(statePath, 'utf-8') : '';
-    // Snapshot the existing progress block BEFORE the transform so we can
-    // restore it when resync is false.
-    const preFm = resync ? null : extractFrontmatter(content);
-    const modified = transformFn(content);
-    let synced = syncStateFrontmatter(modified, cwd);
-
-    if (!resync && preFm && preFm.progress) {
-      // Re-apply the curated progress block that syncStateFrontmatter just
-      // overwrote with disk-derived values.  Only restore keys that were present
-      // in the snapshot — this preserves any new non-progress frontmatter fields
-      // (e.g., status, current_phase) that syncStateFrontmatter legitimately
-      // derived from the updated body.
-      const postFm = extractFrontmatter(synced);
-      postFm.progress = preFm.progress;
-      const yamlStr = reconstructFrontmatter(postFm);
-      const body = stripFrontmatter(synced);
-      synced = `---\n${yamlStr}\n---\n\n${body}`;
-    }
-
-    atomicWriteFileSync(statePath, normalizeMd(synced), 'utf-8');
-  } finally {
-    releaseStateLock(lockPath);
-  }
+  return runStateMutationTransaction({
+    statePath,
+    cwd,
+    transform: transformFn,
+    acquireStateLock,
+    releaseStateLock,
+    syncStateFrontmatter,
+    normalizeMd,
+    atomicWriteFileSync,
+    extractFrontmatter,
+    stripFrontmatter,
+    reconstructFrontmatter,
+    fs,
+    resync: !options || options.resync !== false,
+    mutationSurface: 'full',
+  });
 }
 
 function cmdStateJson(cwd, raw) {
