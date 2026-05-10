@@ -146,26 +146,25 @@ collect_files() {
 extract_and_check_blobs() {
   local file="$1"
   local found=0
-  local line_num=0
 
-  while IFS= read -r line; do
-    line_num=$((line_num + 1))
+  # Extract base64-like blobs once per file. Calling grep for every source line
+  # makes large generated installer files slow enough to hit the CI timeout.
+  local candidates
+  candidates=$(grep -nEo '[A-Za-z0-9+/]{'"$MIN_BLOB_LENGTH"',}={0,3}' "$file" 2>/dev/null || true)
 
-    # Skip data URIs — legitimate base64 usage
-    if is_data_uri "$line"; then
-      continue
-    fi
+  if [[ -z "$candidates" ]]; then
+    return 0
+  fi
 
-    # Extract base64-like blobs (alphanumeric + / + = padding, >= MIN_BLOB_LENGTH)
-    local blobs
-    blobs=$(echo "$line" | grep -oE '[A-Za-z0-9+/]{'"$MIN_BLOB_LENGTH"',}={0,3}' 2>/dev/null || true)
+  while IFS=: read -r line_num blob; do
+      [[ -z "$line_num" || -z "$blob" ]] && continue
 
-    if [[ -z "$blobs" ]]; then
-      continue
-    fi
-
-    while IFS= read -r blob; do
-      [[ -z "$blob" ]] && continue
+      # Skip data URIs — legitimate base64 usage
+      local line
+      line=$(sed -n "${line_num}p" "$file")
+      if is_data_uri "$line"; then
+        continue
+      fi
 
       # Check ignorelist
       if [[ ${#IGNORED_PATTERNS[@]} -gt 0 ]] && is_ignored "$blob"; then
@@ -189,7 +188,7 @@ extract_and_check_blobs() {
 
       # Count printable ASCII characters
       local printable_count
-      printable_count=$(echo -n "$decoded" | tr -cd '[:print:]' | wc -c | tr -d ' ')
+      printable_count=$(echo -n "$decoded" | LC_ALL=C tr -cd '[:print:]' | wc -c | tr -d ' ')
       # Skip if less than 70% printable (likely binary data, not obfuscated text)
       if [[ $((printable_count * 100 / total_chars)) -lt 70 ]]; then
         continue
@@ -209,8 +208,7 @@ extract_and_check_blobs() {
           break
         fi
       done
-    done <<< "$blobs"
-  done < "$file"
+  done <<< "$candidates"
 
   return $found
 }
