@@ -745,9 +745,8 @@ export const roadmapAnnotateDependencies: QueryHandler = async (args, projectDir
     timeoutMs: 15000,
   });
 
-  if (result.ok && result.mode === 'json') return { data: result.data };
-  const failure = result as Extract<typeof result, { ok: false }>;
-  return { data: { updated: false, reason: failure.stderr.trim() || failure.message } };
+  if (!result.ok) return { data: { updated: false, reason: result.stderr.trim() || result.message } };
+  return { data: (result as { ok: true; mode: 'json'; data: unknown; stderr: string }).data };
 };
 
 
