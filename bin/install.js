@@ -8511,11 +8511,6 @@ function install(isGlobal, runtime = 'claude', options = {}) {
     return { settingsPath: null, settings: null, statuslineCommand: null, updateBannerCommand: null, runtime, configDir: targetDir, installPlan };
   }
 
-  if (isCursor) {
-    // Cursor uses skills — no config.toml, no settings.json hooks needed
-    return { settingsPath: null, settings: null, statuslineCommand: null, updateBannerCommand: null, runtime, configDir: targetDir, installPlan };
-  }
-
   if (isWindsurf) {
     // Windsurf uses skills — no config.toml, no settings.json hooks needed
     return { settingsPath: null, settings: null, statuslineCommand: null, updateBannerCommand: null, runtime, configDir: targetDir, installPlan };
