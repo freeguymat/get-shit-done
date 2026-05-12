@@ -9,7 +9,7 @@
 
 process.env.GSD_TEST_MODE = '1';
 
-const { describe, test, beforeEach, afterEach } = require('node:test');
+const { describe, test, before, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -22,6 +22,8 @@ const { install } = installModule;
 const { createTempDir, cleanup } = require('./helpers.cjs');
 
 const installScript = path.join(__dirname, '..', 'bin', 'install.js');
+const HOOKS_DIST = path.join(__dirname, '..', 'hooks', 'dist');
+const BUILD_HOOKS_SCRIPT = path.join(__dirname, '..', 'scripts', 'build-hooks.js');
 const SUPPORTED_RUNTIMES = installModule.allRuntimes;
 const RUNTIME_INSTALL_CONTRACTS = {
   claude: { surface: 'flat-skills', settings: true, packageJson: true },
@@ -262,6 +264,13 @@ function assertFreshInstallContract(runtime, targetDir) {
 describe('installer migration install integration', { concurrency: false }, () => {
   let tmpRoot;
   let codexHome;
+
+  before(() => {
+    if (fs.existsSync(HOOKS_DIST) && fs.readdirSync(HOOKS_DIST).length > 0) return;
+
+    const result = spawnSync(process.execPath, [BUILD_HOOKS_SCRIPT], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  });
 
   beforeEach(() => {
     tmpRoot = createTempDir('gsd-install-migrations-');
