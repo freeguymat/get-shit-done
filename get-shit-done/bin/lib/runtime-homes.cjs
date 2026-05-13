@@ -44,7 +44,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.claude'],
     configEnvVar: 'CLAUDE_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   opencode: Object.freeze({
     runtime: 'opencode',
@@ -55,7 +54,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     configFileEnvVar: 'OPENCODE_CONFIG',
     xdgConfigDirName: 'opencode',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   gemini: Object.freeze({
     runtime: 'gemini',
@@ -64,7 +62,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.gemini'],
     configEnvVar: 'GEMINI_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   kilo: Object.freeze({
     runtime: 'kilo',
@@ -75,7 +72,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     configFileEnvVar: 'KILO_CONFIG',
     xdgConfigDirName: 'kilo',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   codex: Object.freeze({
     runtime: 'codex',
@@ -84,7 +80,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.codex'],
     configEnvVar: 'CODEX_HOME',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   copilot: Object.freeze({
     runtime: 'copilot',
@@ -93,7 +88,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.copilot'],
     configEnvVar: 'COPILOT_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['instructions', 'prompts', 'skills', 'get-shit-done'],
   }),
   antigravity: Object.freeze({
     runtime: 'antigravity',
@@ -102,7 +96,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.gemini', 'antigravity'],
     configEnvVar: 'ANTIGRAVITY_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['agents', 'commands', 'hooks', 'skills', 'get-shit-done'],
   }),
   cursor: Object.freeze({
     runtime: 'cursor',
@@ -111,7 +104,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.cursor'],
     configEnvVar: 'CURSOR_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   windsurf: Object.freeze({
     runtime: 'windsurf',
@@ -120,7 +112,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.codeium', 'windsurf'],
     configEnvVar: 'WINDSURF_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   augment: Object.freeze({
     runtime: 'augment',
@@ -129,7 +120,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.augment'],
     configEnvVar: 'AUGMENT_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   trae: Object.freeze({
     runtime: 'trae',
@@ -138,7 +128,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.trae'],
     configEnvVar: 'TRAE_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   qwen: Object.freeze({
     runtime: 'qwen',
@@ -147,7 +136,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.qwen'],
     configEnvVar: 'QWEN_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   hermes: Object.freeze({
     runtime: 'hermes',
@@ -157,7 +145,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     configEnvVar: 'HERMES_HOME',
     skillsLayout: 'category',
     skillCategory: 'gsd',
-    ownedCleanupDirs: ['agents', 'hooks', 'skills/gsd', 'get-shit-done'],
   }),
   codebuddy: Object.freeze({
     runtime: 'codebuddy',
@@ -166,7 +153,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.codebuddy'],
     configEnvVar: 'CODEBUDDY_CONFIG_DIR',
     skillsLayout: 'flat',
-    ownedCleanupDirs: ['commands', 'agents', 'hooks', 'skills', 'get-shit-done'],
   }),
   cline: Object.freeze({
     runtime: 'cline',
@@ -175,7 +161,6 @@ const RUNTIME_INSTALL_ADAPTERS = deepFreeze({
     globalHomeSegments: ['.cline'],
     configEnvVar: 'CLINE_CONFIG_DIR',
     skillsLayout: 'none',
-    ownedCleanupDirs: ['get-shit-done'],
   }),
 });
 
@@ -203,6 +188,14 @@ function getRuntimeInstallAdapter(runtime) {
   return adapter;
 }
 
+function getRuntimeInstallAdapterOrDefault(runtime) {
+  if (runtime == null || runtime === '') {
+    return RUNTIME_INSTALL_ADAPTERS[DEFAULT_RUNTIME];
+  }
+
+  return RUNTIME_INSTALL_ADAPTERS[runtime] || RUNTIME_INSTALL_ADAPTERS[DEFAULT_RUNTIME];
+}
+
 function getRuntimeLocalDirName(runtime) {
   return getRuntimeInstallAdapter(runtime).localDirName;
 }
@@ -221,15 +214,18 @@ function getConfigDirFromHome(runtime, isGlobal) {
  * @returns {string} Absolute path to the runtime's global config directory
  */
 function getGlobalConfigDir(runtime) {
-  return getGlobalConfigDirForInstall(runtime, null);
+  return getGlobalConfigDirForAdapter(getRuntimeInstallAdapterOrDefault(runtime), null);
 }
 
 function getGlobalConfigDirForInstall(runtime, explicitDir = null) {
+  return getGlobalConfigDirForAdapter(getRuntimeInstallAdapter(runtime), explicitDir);
+}
+
+function getGlobalConfigDirForAdapter(adapter, explicitDir = null) {
   if (explicitDir) return expandTilde(explicitDir);
 
   const home = os.homedir();
   const env = process.env;
-  const adapter = getRuntimeInstallAdapter(runtime);
 
   if (adapter.configEnvVar && env[adapter.configEnvVar]) {
     return expandTilde(env[adapter.configEnvVar]);
@@ -256,9 +252,9 @@ function getGlobalConfigDirForInstall(runtime, explicitDir = null) {
  * @returns {string|null}
  */
 function getGlobalSkillsBase(runtime) {
-  const adapter = getRuntimeInstallAdapter(runtime);
+  const adapter = getRuntimeInstallAdapterOrDefault(runtime);
   if (adapter.skillsLayout === 'none') return null;
-  const configDir = getGlobalConfigDir(runtime);
+  const configDir = getGlobalConfigDirForAdapter(adapter);
   if (adapter.skillsLayout === 'category') return path.join(configDir, 'skills', adapter.skillCategory);
   return path.join(configDir, 'skills');
 }

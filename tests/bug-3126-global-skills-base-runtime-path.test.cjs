@@ -46,6 +46,119 @@ function withEnv(key, value, fn) {
   }
 }
 
+const ADAPTER_PARITY = {
+  claude: {
+    label: 'Claude Code',
+    localDirName: '.claude',
+    globalHomeSegments: ['.claude'],
+    configEnvVar: 'CLAUDE_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  opencode: {
+    label: 'OpenCode',
+    localDirName: '.opencode',
+    globalHomeSegments: ['.config', 'opencode'],
+    configEnvVar: 'OPENCODE_CONFIG_DIR',
+    configFileEnvVar: 'OPENCODE_CONFIG',
+    xdgConfigDirName: 'opencode',
+    skillsLayout: 'flat',
+  },
+  gemini: {
+    label: 'Gemini CLI',
+    localDirName: '.gemini',
+    globalHomeSegments: ['.gemini'],
+    configEnvVar: 'GEMINI_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  kilo: {
+    label: 'Kilo',
+    localDirName: '.kilo',
+    globalHomeSegments: ['.config', 'kilo'],
+    configEnvVar: 'KILO_CONFIG_DIR',
+    configFileEnvVar: 'KILO_CONFIG',
+    xdgConfigDirName: 'kilo',
+    skillsLayout: 'flat',
+  },
+  codex: {
+    label: 'Codex',
+    localDirName: '.codex',
+    globalHomeSegments: ['.codex'],
+    configEnvVar: 'CODEX_HOME',
+    skillsLayout: 'flat',
+  },
+  copilot: {
+    label: 'Copilot',
+    localDirName: '.github',
+    globalHomeSegments: ['.copilot'],
+    configEnvVar: 'COPILOT_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  antigravity: {
+    label: 'Antigravity',
+    localDirName: '.agent',
+    globalHomeSegments: ['.gemini', 'antigravity'],
+    configEnvVar: 'ANTIGRAVITY_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  cursor: {
+    label: 'Cursor',
+    localDirName: '.cursor',
+    globalHomeSegments: ['.cursor'],
+    configEnvVar: 'CURSOR_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  windsurf: {
+    label: 'Windsurf',
+    localDirName: '.windsurf',
+    globalHomeSegments: ['.codeium', 'windsurf'],
+    configEnvVar: 'WINDSURF_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  augment: {
+    label: 'Augment',
+    localDirName: '.augment',
+    globalHomeSegments: ['.augment'],
+    configEnvVar: 'AUGMENT_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  trae: {
+    label: 'Trae',
+    localDirName: '.trae',
+    globalHomeSegments: ['.trae'],
+    configEnvVar: 'TRAE_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  qwen: {
+    label: 'Qwen Code',
+    localDirName: '.qwen',
+    globalHomeSegments: ['.qwen'],
+    configEnvVar: 'QWEN_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  hermes: {
+    label: 'Hermes Agent',
+    localDirName: '.hermes',
+    globalHomeSegments: ['.hermes'],
+    configEnvVar: 'HERMES_HOME',
+    skillsLayout: 'category',
+    skillCategory: 'gsd',
+  },
+  codebuddy: {
+    label: 'CodeBuddy',
+    localDirName: '.codebuddy',
+    globalHomeSegments: ['.codebuddy'],
+    configEnvVar: 'CODEBUDDY_CONFIG_DIR',
+    skillsLayout: 'flat',
+  },
+  cline: {
+    label: 'Cline',
+    localDirName: '.cline',
+    globalHomeSegments: ['.cline'],
+    configEnvVar: 'CLINE_CONFIG_DIR',
+    skillsLayout: 'none',
+  },
+};
+
 describe('bug #3126: runtime-homes getGlobalConfigDir — defaults', () => {
   const defaults = [
     ['claude',      path.join(os.homedir(), '.claude')],
@@ -83,12 +196,9 @@ describe('bug #3126: runtime-homes getGlobalConfigDir — defaults', () => {
       }
     });
   }
-  test('unknown runtime fails fast instead of falling back to ~/.claude', () => {
+  test('unknown runtime preserves legacy fallback to ~/.claude for public helper', () => {
     withEnv('CLAUDE_CONFIG_DIR', undefined, () => {
-      assert.throws(
-        () => getGlobalConfigDir('unknown-xyz'),
-        /Unsupported runtime: unknown-xyz/,
-      );
+      assert.strictEqual(getGlobalConfigDir('unknown-xyz'), path.join(os.homedir(), '.claude'));
     });
   });
 });
@@ -150,15 +260,34 @@ describe('bug #3126: runtime-homes env-var overrides', () => {
 });
 
 describe('runtime install materialization adapters', () => {
-  test('adapters expose runtime metadata, local dirs, layouts, and cleanup ownership', () => {
+  test('adapters match migrated runtime metadata values', () => {
+    assert.deepStrictEqual(
+      Object.keys(RUNTIME_INSTALL_ADAPTERS).sort(),
+      Object.keys(ADAPTER_PARITY).sort(),
+    );
+
+    for (const [runtime, expected] of Object.entries(ADAPTER_PARITY)) {
+      assert.deepStrictEqual(
+        RUNTIME_INSTALL_ADAPTERS[runtime],
+        { runtime, ...expected },
+        `${runtime} adapter metadata drifted from the migrated mapping`,
+      );
+    }
+  });
+
+  test('adapters expose runtime metadata, local dirs, and layouts', () => {
     for (const [runtime, adapter] of Object.entries(RUNTIME_INSTALL_ADAPTERS)) {
       assert.strictEqual(adapter.runtime, runtime);
       assert.ok(adapter.label, `${runtime} adapter has a label`);
       assert.ok(adapter.localDirName, `${runtime} adapter has a localDirName`);
       assert.ok(['flat', 'category', 'none'].includes(adapter.skillsLayout),
         `${runtime} adapter has a known skillsLayout`);
-      assert.ok(Array.isArray(adapter.ownedCleanupDirs),
-        `${runtime} adapter declares owned cleanup dirs`);
+      if (adapter.skillsLayout === 'category') {
+        assert.ok(
+          typeof adapter.skillCategory === 'string' && adapter.skillCategory.length > 0,
+          `${runtime} category layout declares skillCategory`,
+        );
+      }
     }
   });
 
@@ -173,7 +302,6 @@ describe('runtime install materialization adapters', () => {
     assert.ok(Object.isFrozen(RUNTIME_INSTALL_ADAPTERS));
     assert.ok(Object.isFrozen(RUNTIME_INSTALL_ADAPTERS.claude));
     assert.ok(Object.isFrozen(RUNTIME_INSTALL_ADAPTERS.claude.globalHomeSegments));
-    assert.ok(Object.isFrozen(RUNTIME_INSTALL_ADAPTERS.claude.ownedCleanupDirs));
     assert.throws(() => {
       RUNTIME_INSTALL_ADAPTERS.claude.globalHomeSegments.push('mutated');
     }, TypeError);
@@ -186,6 +314,19 @@ describe('runtime install materialization adapters', () => {
       () => getRuntimeInstallAdapter('claud'),
       /Unsupported runtime: claud/,
     );
+  });
+
+  test('public skills helpers preserve legacy unknown-runtime fallback', () => {
+    withEnv('CLAUDE_CONFIG_DIR', undefined, () => {
+      assert.strictEqual(
+        getGlobalSkillsBase('unknown-xyz'),
+        path.join(os.homedir(), '.claude', 'skills'),
+      );
+      assert.strictEqual(
+        getGlobalSkillDir('unknown-xyz', 'gsd-executor'),
+        path.join(os.homedir(), '.claude', 'skills', 'gsd-executor'),
+      );
+    });
   });
 
   test('runtime install adapter resolves local dir and config-dir fragments', () => {

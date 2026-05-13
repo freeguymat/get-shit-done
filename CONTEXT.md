@@ -62,10 +62,10 @@ Adapter Module owning linked-worktree root mapping and metadata-prune policy (`g
 Module owning SDK-to-`get-shit-done-cc` compatibility policy: legacy asset discovery, install-layout probing, transition-only error messaging, and thin Adapter access for CJS-era assets that native SDK Modules have not replaced yet.
 
 ### Runtime-Global Skills Policy Module
-Module owning runtime-aware global skills directory policy for SDK query surfaces. Resolves runtime-global skills bases/skill paths from runtime + env precedence, renders display paths for warnings/manifests, and reports unsupported runtimes with no skills directory.
+Module owning runtime-aware global skills directory policy for SDK query surfaces. Resolves runtime-global skills bases/skill paths from runtime + env precedence, renders display paths for warnings/manifests, and reports supported runtimes with no skills directory.
 
 ### Runtime Install Materialization Module
-Module owning runtime install Adapter metadata for installer-facing path/layout policy: runtime labels, local install directories, global config env precedence, skills layout (`flat`, `category`, or `none`), and GSD-owned cleanup roots. Installer call sites delegate to this Interface instead of re-encoding runtime branches.
+Module owning runtime install Adapter metadata for installer-facing path/layout policy: runtime labels, local install directories, global config env precedence, and skills layout (`flat`, `category`, or `none`). Installer call sites delegate to this Interface instead of re-encoding runtime branches.
 
 ### Installer Migration Authoring Guard Module
 Module owning validation for Installer Migration Module records and planned actions. It enforces migration metadata, explicit install scopes, ownership evidence for destructive/config actions, and runtime contract citations for runtime config rewrites before a migration can enter planning or apply.
