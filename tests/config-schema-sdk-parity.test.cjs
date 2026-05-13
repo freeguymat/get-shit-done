@@ -59,3 +59,28 @@ test('SDK Adapter projects the shared Config Schema Module data', async () => {
     SHARED_SCHEMA.dynamicKeyPatterns,
   );
 });
+
+test('dynamic key patterns match representative valid keys and reject empty suffixes', async () => {
+  const sdkSchema = await import(SDK_SCHEMA_URL);
+  const cases = [
+    ['agent_skills', 'agent_skills.worker', 'agent_skills.'],
+    ['review', 'review.models.codex', 'review.models.'],
+    ['features', 'features.global_learnings', 'features.'],
+    ['claude_md_assembly', 'claude_md_assembly.blocks.context', 'claude_md_assembly.blocks.'],
+    ['model_profile_overrides', 'model_profile_overrides.codex.sonnet', 'model_profile_overrides.codex.gpt'],
+    ['models', 'models.planning', 'models.invalid'],
+    ['dynamic_routing', 'dynamic_routing.tier_models.light', 'dynamic_routing.tier_models.'],
+    ['model_overrides', 'model_overrides.agent-1', 'model_overrides.'],
+  ];
+
+  for (const [topLevel, validKey, invalidKey] of cases) {
+    const cjsPattern = CJS_PATTERNS.find((pattern) => pattern.topLevel === topLevel);
+    const sdkPattern = sdkSchema.DYNAMIC_KEY_PATTERNS.find((pattern) => pattern.topLevel === topLevel);
+    assert.ok(cjsPattern, `missing CJS dynamic pattern for ${topLevel}`);
+    assert.ok(sdkPattern, `missing SDK dynamic pattern for ${topLevel}`);
+    assert.equal(cjsPattern.test(validKey), true, `CJS should accept ${validKey}`);
+    assert.equal(sdkPattern.test(validKey), true, `SDK should accept ${validKey}`);
+    assert.equal(cjsPattern.test(invalidKey), false, `CJS should reject ${invalidKey}`);
+    assert.equal(sdkPattern.test(invalidKey), false, `SDK should reject ${invalidKey}`);
+  }
+});

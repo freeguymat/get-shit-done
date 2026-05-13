@@ -6,7 +6,7 @@
 
 ## Configuration File
 
-GSD stores project settings in `.planning/config.json`. Fresh configs created during `/gsd-new-project` enable planning-doc commits by default with `commit_docs: true`; the namespaced `planning.commit_docs: true` form is also accepted. Update with `/gsd-settings` or `gsd-sdk query config-set planning.commit_docs false`.
+GSD stores project settings in `.planning/config.json`. Fresh configs created during `/gsd-new-project` keep planning-doc commits disabled by default with `commit_docs: false`; the namespaced `planning.commit_docs` form is also accepted. Update with `/gsd-settings` or `gsd-sdk query config-set planning.commit_docs true`.
 
 ### Full Schema
 
@@ -138,7 +138,7 @@ GSD stores project settings in `.planning/config.json`. Fresh configs created du
 | `brave_search` | boolean | `true`/`false` | auto-detected | Override auto-detection of Brave Search API availability. When unset, GSD checks for `BRAVE_API_KEY` env var or `~/.gsd/brave_api_key` file |
 | `firecrawl` | boolean | `true`/`false` | auto-detected | Override auto-detection of Firecrawl API availability. When unset, GSD checks for `FIRECRAWL_API_KEY` env var or `~/.gsd/firecrawl_api_key` file |
 | `exa_search` | boolean | `true`/`false` | auto-detected | Override auto-detection of Exa Search API availability. When unset, GSD checks for `EXA_API_KEY` env var or `~/.gsd/exa_api_key` file |
-| `commit_docs` | boolean | `true`/`false` | `true` | Top-level form generated for fresh project configs. Equivalent to `planning.commit_docs`; if both are present, `commit_docs` wins. Set `false` to keep planning artifacts out of git |
+| `commit_docs` | boolean | `true`/`false` | `false` | Top-level form generated for fresh project configs. Equivalent to `planning.commit_docs`; if both are present, `commit_docs` wins. Set `true` to commit planning artifacts to git |
 | `search_gitignored` | boolean | `true`/`false` | `false` | Legacy top-level alias for `planning.search_gitignored`. Prefer the namespaced form; this alias is accepted for backward compatibility |
 
 > **Note:** `granularity` was renamed from `depth` in v1.22.3. Existing configs are auto-migrated.
@@ -293,7 +293,7 @@ Example:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `planning.commit_docs` | boolean | `true` | Whether `.planning/` files are committed to git. Fresh project configs enable this by default; set `false` to opt out |
+| `planning.commit_docs` | boolean | `true` | Whether `.planning/` files are committed to git. Fresh project configs write the top-level `commit_docs: false` default; set `true` to opt in |
 | `planning.search_gitignored` | boolean | `false` | Add `--no-ignore` to broad searches to include `.planning/` |
 | `planning.sub_repos` | array of strings | `[]` | Paths of nested sub-repos relative to the project root. When set, GSD-aware tooling scopes phase-lookup, path-resolution, and commit operations per sub-repo instead of treating the outer repo as a monorepo |
 

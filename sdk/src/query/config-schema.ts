@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import configSchemaData from '../../shared/config-schema.json' with { type: 'json' };
 
 /**
  * Thin SDK Adapter over the Config Schema Module shared data.
@@ -28,11 +28,7 @@ interface ConfigSchemaData {
   }>;
 }
 
-const schemaUrl = new URL('../../shared/config-schema.json', import.meta.url);
-
-export const CONFIG_SCHEMA_DATA = JSON.parse(
-  readFileSync(schemaUrl, 'utf-8'),
-) as ConfigSchemaData;
+export const CONFIG_SCHEMA_DATA = configSchemaData as ConfigSchemaData;
 
 /** Exact-match config key paths accepted by config-set. */
 export const VALID_CONFIG_KEYS: ReadonlySet<string> = new Set(CONFIG_SCHEMA_DATA.validConfigKeys);
