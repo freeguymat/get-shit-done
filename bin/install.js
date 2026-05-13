@@ -8362,11 +8362,9 @@ function install(isGlobal, runtime = 'claude', options = {}) {
       throw new Error(`Codex hook artifact install failed: ${e && e.message ? e.message : String(e)}`);
     }
     const codexHookFailures = codexHookCopy && Array.isArray(codexHookCopy.failures) ? codexHookCopy.failures : [];
-    if (!codexHookCopy || codexHookCopy.missingSource || codexHookCopy.skipped || codexHookFailures.length > 0) {
+    if (codexHookFailures.length > 0) {
       restoreCodexSnapshot();
-      throw new Error(
-        `Codex hook artifact install failed: ${codexHookCopy ? (codexHookFailures.join(', ') || 'hooks artifact not copied') : 'no result returned'}`
-      );
+      throw new Error(`Codex hook artifact install failed: ${codexHookFailures.join(', ')}`);
     }
 
     // Add Codex hooks (SessionStart for update checking) — requires codex_hooks feature flag
