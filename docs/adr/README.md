@@ -16,8 +16,9 @@ Each ADR documents one architectural decision: what was decided, why, and what c
 | [0006-planning-path-projection-module.md](0006-planning-path-projection-module.md) | Planning Path Projection Module for SDK query handlers | Accepted |
 | [0007-sdk-package-seam-module.md](0007-sdk-package-seam-module.md) | SDK Package Seam Module owns SDK-to-get-shit-done-cc compatibility | Accepted |
 | [0008-installer-migration-module.md](0008-installer-migration-module.md) | Installer Migration Module owns install-time upgrade safety | Accepted |
-| [0009-shell-command-projection-module.md](0009-shell-command-projection-module.md) | Shell Command Projection Module owns runtime-aware OS command rendering | Proposed |
-| [0010-config-schema-module.md](0010-config-schema-module.md) | Config Schema Module as shared schema data | Accepted |
+| [0009-shell-command-projection-module.md](0009-shell-command-projection-module.md) | Shell Command Projection Module owns runtime-aware OS command rendering | Accepted |
+| [0010-file-operation-engine-module.md](0010-file-operation-engine-module.md) | File Operation Engine Module owns safe runtime/config file mutations | Proposed |
+| [0011-config-schema-module.md](0011-config-schema-module.md) | Config Schema Module as shared schema data | Accepted |
 
 ## Seam map
 
@@ -30,4 +31,8 @@ ADR 0008 documents the Installer Migration Module for safe install-time moves, r
 ADR 0009 documents the Shell Command Projection Module seam for runtime-aware
 projection of installer-owned command text and projection IR.
 
-ADR 0010 documents config schema ownership. Cross-reference with the Config Schema Module glossary entry in `CONTEXT.md` for the boundary between shared schema data, runtime Adapters, config mutation handlers, and docs parity tests.
+ADR 0010 documents the File Operation Engine Module seam for converging
+installer/migration/planning file mutation safety policy, and its relationship
+to ADR 0009 hook-command ownership policy.
+
+ADR 0011 documents config schema ownership. Cross-reference with the Config Schema Module glossary entry in `CONTEXT.md` for the boundary between shared schema data, runtime Adapters, config mutation handlers, and docs parity tests.

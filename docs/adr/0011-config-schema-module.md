@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-05-10
 
-We decided to make config key registration a shared **Config Schema Module** backed by shipped schema data, with thin CJS and SDK Adapters projecting the existing runtime Interfaces.
+We decided to make config key registration a shared **Config Schema Module** backed by shipped shared schema data, with thin CJS and SDK Adapters projecting the existing runtime Interfaces.
 
 ## Context
 
