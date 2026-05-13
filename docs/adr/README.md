@@ -16,7 +16,9 @@ Each ADR documents one architectural decision: what was decided, why, and what c
 | [0006-planning-path-projection-module.md](0006-planning-path-projection-module.md) | Planning Path Projection Module for SDK query handlers | Accepted |
 | [0007-sdk-package-seam-module.md](0007-sdk-package-seam-module.md) | SDK Package Seam Module owns SDK-to-get-shit-done-cc compatibility | Accepted |
 | [0008-installer-migration-module.md](0008-installer-migration-module.md) | Installer Migration Module owns install-time upgrade safety | Accepted |
-| [0009-state-mutation-transaction-module.md](0009-state-mutation-transaction-module.md) | STATE.md Mutation Transaction Module owns write transaction policy | Accepted |
+| [0009-shell-command-projection-module.md](0009-shell-command-projection-module.md) | Shell Command Projection Module owns runtime-aware OS command rendering | Accepted |
+| [0010-file-operation-engine-module.md](0010-file-operation-engine-module.md) | File Operation Engine Module owns safe runtime/config file mutations | Proposed |
+| [0011-state-mutation-transaction-module.md](0011-state-mutation-transaction-module.md) | STATE.md Mutation Transaction Module owns write transaction policy | Accepted |
 
 ## Seam map
 
@@ -26,4 +28,11 @@ ADR 0006 documents how SDK query handlers project planning paths (`cwd → effec
 
 ADR 0008 documents the Installer Migration Module for safe install-time moves, removals, config rewrites, and user-data preservation.
 
-ADR 0009 documents STATE.md mutation transaction ownership. Cross-reference with the STATE.md Document Module glossary entry in `CONTEXT.md` for the boundary between pure text transforms and write transaction policy.
+ADR 0009 documents the Shell Command Projection Module seam for runtime-aware
+projection of installer-owned command text and projection IR.
+
+ADR 0010 documents the File Operation Engine Module seam for converging
+installer/migration/planning file mutation safety policy, and its relationship
+to ADR 0009 hook-command ownership policy.
+
+ADR 0011 documents STATE.md mutation transaction ownership. Cross-reference with the STATE.md Document Module glossary entry in `CONTEXT.md` for the boundary between pure text transforms and write transaction policy.

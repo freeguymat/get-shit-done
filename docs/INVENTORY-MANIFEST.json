@@ -258,6 +258,7 @@
     ],
     "cli_modules": [
       "active-workstream-store.cjs",
+      "adr-parser.cjs",
       "artifacts.cjs",
       "audit.cjs",
       "cjs-command-router-adapter.cjs",
@@ -298,6 +299,7 @@
       "schema-detect.cjs",
       "secrets.cjs",
       "security.cjs",
+      "shell-command-projection.cjs",
       "state-command-router.cjs",
       "state-document.cjs",
       "state-transaction.cjs",
