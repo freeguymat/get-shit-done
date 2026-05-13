@@ -1002,7 +1002,12 @@ function readModifyWriteStateMd(statePath, transformFn, cwd, options) {
   const resync = !options || options.resync !== false;
   const lockPath = acquireStateLock(statePath);
   try {
-    const content = platformReadSync(statePath) || '';
+    const content = platformReadSync(statePath);
+    if (content === null || content === undefined) {
+      const err = new Error('STATE.md not found');
+      err.code = 'ENOENT';
+      throw err;
+    }
     // Snapshot the existing progress block BEFORE the transform so we can
     // restore it when resync is false.
     const preFm = resync ? null : extractFrontmatter(content);

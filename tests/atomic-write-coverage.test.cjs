@@ -26,30 +26,159 @@ const path = require('node:path');
 
 const libDir = path.resolve(__dirname, '..', 'get-shit-done', 'bin', 'lib');
 
+function isIdentifierChar(ch) {
+  return /[A-Za-z0-9_$]/.test(ch);
+}
+
+function isEscaped(content, idx) {
+  let backslashes = 0;
+  for (let i = idx - 1; i >= 0 && content[i] === '\\'; i--) backslashes++;
+  return backslashes % 2 === 1;
+}
+
+function getLineNumber(content, idx) {
+  let line = 1;
+  for (let i = 0; i < idx; i++) {
+    if (content[i] === '\n') line++;
+  }
+  return line;
+}
+
+function findClosingParen(content, openParenIdx) {
+  let depth = 0;
+  let quote = null;
+  let inLineComment = false;
+  let inBlockComment = false;
+  for (let i = openParenIdx; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+
+    if (inLineComment) {
+      if (ch === '\n') inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        inBlockComment = false;
+        i++;
+      }
+      continue;
+    }
+    if (quote) {
+      if (ch === quote && !isEscaped(content, i)) quote = null;
+      continue;
+    }
+
+    if (ch === '/' && next === '/') {
+      inLineComment = true;
+      i++;
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      i++;
+      continue;
+    }
+    if (ch === '"' || ch === '\'') {
+      quote = ch;
+      continue;
+    }
+
+    if (ch === '(') depth++;
+    else if (ch === ')') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
 /**
  * Find all fs.writeFileSync(...) call sites in a file.
- * Returns array of { line: number, text: string }.
+ * Returns array of { line: number, text: string, args: string[] }.
  */
 function findBareWrites(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+  const needle = 'fs.writeFileSync';
   const hits = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (/\bfs\.writeFileSync\s*\(/.test(lines[i])) {
-      hits.push({ line: i + 1, text: lines[i].trim() });
+  let idx = 0;
+  while (idx < content.length) {
+    const found = content.indexOf(needle, idx);
+    if (found === -1) break;
+    const before = found > 0 ? content[found - 1] : '';
+    const after = content[found + needle.length] || '';
+    if (isIdentifierChar(before) || isIdentifierChar(after)) {
+      idx = found + needle.length;
+      continue;
     }
+
+    let p = found + needle.length;
+    while (p < content.length && /\s/.test(content[p])) p++;
+    if (content[p] !== '(') {
+      idx = found + needle.length;
+      continue;
+    }
+    const end = findClosingParen(content, p);
+    if (end === -1) {
+      idx = found + needle.length;
+      continue;
+    }
+    hits.push({
+      line: getLineNumber(content, found),
+      text: content.slice(found, end + 1).replace(/\s+/g, ' ').trim(),
+      args: splitTopLevelArgs(content.slice(p + 1, end)),
+    });
+    idx = end + 1;
   }
   return hits;
 }
 
 /**
+ * Split function-call arguments while respecting nested brackets and quotes.
+ */
+function splitTopLevelArgs(text) {
+  const args = [];
+  let start = 0;
+  let depthParen = 0;
+  let depthBrace = 0;
+  let depthBracket = 0;
+  let quote = null;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === quote && !isEscaped(text, i)) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === '\'') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(') depthParen++;
+    else if (ch === ')') depthParen--;
+    else if (ch === '{') depthBrace++;
+    else if (ch === '}') depthBrace--;
+    else if (ch === '[') depthBracket++;
+    else if (ch === ']') depthBracket--;
+    else if (ch === ',' && depthParen === 0 && depthBrace === 0 && depthBracket === 0) {
+      args.push(text.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  const tail = text.slice(start).trim();
+  if (tail) args.push(tail);
+  return args;
+}
+
+/**
  * Classify a bare write as allowed (archive, .gitkeep) or disallowed.
  */
-function isAllowedException(lineText) {
+function isAllowedException(hit) {
+  const firstArg = hit.args[0] || '';
   // .gitkeep writes (empty file, no corruption risk)
-  if (/\.gitkeep/.test(lineText)) return true;
+  if (firstArg.includes('.gitkeep')) return true;
   // Archive directory writes (new files, not read-modify-write)
-  if (/archiveDir/.test(lineText)) return true;
+  if (firstArg.includes('archiveDir')) return true;
   return false;
 }
 
@@ -62,7 +191,7 @@ describe('atomic write coverage (#1972)', () => {
       assert.ok(fs.existsSync(filePath), `${file} must exist at ${filePath}`);
 
       const hits = findBareWrites(filePath);
-      const violations = hits.filter(h => !isAllowedException(h.text));
+      const violations = hits.filter(h => !isAllowedException(h));
 
       if (violations.length > 0) {
         const report = violations.map(v => `  line ${v.line}: ${v.text}`).join('\n');
@@ -78,7 +207,7 @@ describe('atomic write coverage (#1972)', () => {
       const content = fs.readFileSync(filePath, 'utf-8');
       assert.match(
         content,
-        /platformWriteSync[^)]*\}\s*=\s*require\(['"]\.\/shell-command-projection\.cjs['"]\)/s,
+        /\{\s*[^}]*\bplatformWriteSync\b[^}]*\}\s*=\s*require\(['"]\.\/shell-command-projection\.cjs['"]\)/s,
         `${file} must import platformWriteSync from shell-command-projection.cjs`
       );
     });

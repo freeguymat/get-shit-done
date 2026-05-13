@@ -894,6 +894,8 @@ describe('cmdStateGet (state get)', () => {
 
 describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
   let tmpDir;
+  const statePathFor = (dir) => path.join(dir, '.planning', 'STATE.md');
+  const stateLockPathFor = (dir) => `${statePathFor(dir)}.lock`;
   const stateMd = [
     '# Project State',
     '',
@@ -911,18 +913,18 @@ describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
   });
 
   test('state patch updates multiple fields at once', () => {
-    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'), stateMd);
+    fs.writeFileSync(statePathFor(tmpDir), stateMd);
 
     const result = runGsdTools('state patch --Status Complete --"Current Phase" 04', tmpDir);
     assert.ok(result.success, `Command failed: ${result.error}`);
 
-    const updated = fs.readFileSync(path.join(tmpDir, '.planning', 'STATE.md'), 'utf-8');
+    const updated = fs.readFileSync(statePathFor(tmpDir), 'utf-8');
     assert.ok(updated.includes('**Status:** Complete'), 'Status should be updated to Complete');
     assert.ok(updated.includes('**Last Activity:** 2024-01-15'), 'Last Activity should be unchanged');
   });
 
   test('state patch reports failed fields that do not exist', () => {
-    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'), stateMd);
+    fs.writeFileSync(statePathFor(tmpDir), stateMd);
 
     const result = runGsdTools('state patch --Status Done --Missing value', tmpDir);
     assert.ok(result.success, `Command failed: ${result.error}`);
@@ -935,7 +937,7 @@ describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
   });
 
   test('state update changes a single field', () => {
-    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'), stateMd);
+    fs.writeFileSync(statePathFor(tmpDir), stateMd);
 
     const result = runGsdTools('state update Status "Phase complete"', tmpDir);
     assert.ok(result.success, `Command failed: ${result.error}`);
@@ -943,14 +945,14 @@ describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
     const output = JSON.parse(result.output);
     assert.strictEqual(output.updated, true, 'updated should be true');
 
-    const updated = fs.readFileSync(path.join(tmpDir, '.planning', 'STATE.md'), 'utf-8');
+    const updated = fs.readFileSync(statePathFor(tmpDir), 'utf-8');
     assert.ok(updated.includes('**Status:** Phase complete'), 'Status should be updated');
     assert.ok(updated.includes('**Current Phase:** 03'), 'Current Phase should be unchanged');
     assert.ok(updated.includes('**Last Activity:** 2024-01-15'), 'Last Activity should be unchanged');
   });
 
   test('state update reports field not found', () => {
-    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'), stateMd);
+    fs.writeFileSync(statePathFor(tmpDir), stateMd);
 
     const result = runGsdTools('state update Missing value', tmpDir);
     assert.ok(result.success, `Command should exit 0 for not-found field: ${result.error}`);
@@ -961,6 +963,7 @@ describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
   });
 
   test('state update returns error when STATE.md missing', () => {
+    try { fs.unlinkSync(statePathFor(tmpDir)); } catch {}
     const result = runGsdTools('state update Status value', tmpDir);
     assert.ok(result.success, `Command should exit 0: ${result.error}`);
 
@@ -970,6 +973,20 @@ describe('cmdStatePatch and cmdStateUpdate (state patch, state update)', () => {
       output.reason.includes('STATE.md'),
       'reason should mention STATE.md'
     );
+    assert.ok(!fs.existsSync(statePathFor(tmpDir)), 'STATE.md should not be fabricated');
+    assert.ok(!fs.existsSync(stateLockPathFor(tmpDir)), 'STATE.md lockfile should not remain');
+  });
+
+  test('state patch fails when STATE.md missing and does not create file', () => {
+    try { fs.unlinkSync(statePathFor(tmpDir)); } catch {}
+    const result = runGsdTools('state patch --Status Complete', tmpDir);
+    assert.ok(!result.success, 'state patch should fail when STATE.md is missing');
+    assert.ok(
+      result.error.includes('STATE.md') || result.output.includes('STATE.md'),
+      'error should mention STATE.md'
+    );
+    assert.ok(!fs.existsSync(statePathFor(tmpDir)), 'STATE.md should not be fabricated');
+    assert.ok(!fs.existsSync(stateLockPathFor(tmpDir)), 'STATE.md lockfile should not remain');
   });
 });
 
