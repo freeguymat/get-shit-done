@@ -18,6 +18,7 @@ Each ADR documents one architectural decision: what was decided, why, and what c
 | [0008-installer-migration-module.md](0008-installer-migration-module.md) | Installer Migration Module owns install-time upgrade safety | Accepted |
 | [0009-shell-command-projection-module.md](0009-shell-command-projection-module.md) | Shell Command Projection Module owns runtime-aware OS command rendering | Accepted |
 | [0010-file-operation-engine-module.md](0010-file-operation-engine-module.md) | File Operation Engine Module owns safe runtime/config file mutations | Proposed |
+| [0011-config-schema-module.md](0011-config-schema-module.md) | Config Schema Module as shared schema data | Accepted |
 
 ## Seam map
 
