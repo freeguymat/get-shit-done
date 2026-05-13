@@ -87,6 +87,11 @@ function getGlobalDir(runtime, explicitDir = null, opts = {}) {
   return path.join(homeDir, ...policy.global.fallback);
 }
 
+function prefixReplace(value, prefix, replacement) {
+  if (!prefix) return value;
+  return value.startsWith(prefix) ? `${replacement}${value.slice(prefix.length)}` : value;
+}
+
 function buildRuntimePromptText() {
   const lines = allRuntimes.map((runtime) => {
     const policy = getRuntimePolicy(runtime);
@@ -149,8 +154,8 @@ function createRuntimeInstallPlan(options = {}) {
     targetDir,
     localDir: policy.localDir,
     locationLabel: scope === 'global'
-      ? targetDir.replace(options.homeDir || os.homedir(), '~')
-      : targetDir.replace(cwd, '.'),
+      ? prefixReplace(targetDir, options.homeDir || os.homedir(), '~')
+      : prefixReplace(targetDir, cwd, '.'),
     firstRunCommand: policy.firstRunCommand,
     skillsLayout: policy.skillsLayout,
     skillsBase,
