@@ -188,8 +188,27 @@ describe('SDK Package Seam Module', () => {
     }
   });
 
+  it('reports missing @file JSON output paths clearly', async () => {
+    const script = await createScript('missing-file.cjs', `process.stdout.write('@file:.planning/missing.json');`);
+
+    const result = await runLegacyGsdTools({
+      projectDir: tmpDir!,
+      gsdToolsPath: script,
+      command: 'state.load',
+      mode: 'json',
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('parse_failed');
+      expect(result.message).toContain('@file path not found or unreadable');
+      expect(result.message).toContain('.planning/missing.json');
+      expect(result.exitCode).toBe(0);
+    }
+  });
+
   it('classifies auto output as text when legacy output is not JSON', async () => {
-    const script = await createScript('text.cjs', `process.stdout.write('plain output');`);
+    const script = await createScript('text.cjs', `process.stdout.write('  plain output  ');`);
 
     const result = await runLegacyGsdTools({
       projectDir: tmpDir!,

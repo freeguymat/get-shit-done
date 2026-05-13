@@ -245,4 +245,36 @@ describe('STATE.md Mutation Transaction Module', () => {
 
     assert.equal(fs.existsSync(lockPath), false);
   });
+
+  test('rejects async CJS transforms before writing', () => {
+    const dir = makeTempDir();
+    const statePath = path.join(dir, 'STATE.md');
+    fs.writeFileSync(statePath, '# State\n\nStatus: Planning\n', 'utf-8');
+    const lockPath = `${statePath}.lock`;
+
+    assert.throws(() => {
+      runStateMutationTransaction({
+        statePath,
+        cwd: dir,
+        transform: async (content) => content.replace('Status: Planning', 'Status: Complete'),
+        acquireStateLock: (p) => {
+          fs.writeFileSync(`${p}.lock`, String(process.pid), 'utf-8');
+          return `${p}.lock`;
+        },
+        releaseStateLock: (p) => fs.rmSync(p, { force: true }),
+        buildStateFrontmatter: () => ({ status: 'completed' }),
+        normalizeMd: (content) => content,
+        atomicWriteFileSync: fs.writeFileSync,
+        extractFrontmatter,
+        stripFrontmatter,
+        reconstructFrontmatter,
+        fs,
+        mutationSurface: 'full',
+      });
+    }, /transform must be synchronous/);
+
+    assert.equal(fs.existsSync(lockPath), false);
+    assert.doesNotMatch(fs.readFileSync(statePath, 'utf-8'), /\[object Promise\]/);
+    assert.match(fs.readFileSync(statePath, 'utf-8'), /Status: Planning/);
+  });
 });

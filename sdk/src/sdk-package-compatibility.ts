@@ -152,6 +152,7 @@ function missingLegacyGsdToolsResult(resolution: LegacySdkAssetResolution): Lega
 
 function cjsCommandArgs(command: string, args: string[], workstream?: string): string[] {
   const dotIndex = command.indexOf('.');
+  // Legacy CJS command routing splits dotted commands on the first dot only.
   const commandArgs = dotIndex >= 0
     ? [command.slice(0, dotIndex).trim(), command.slice(dotIndex + 1).trim()].filter(Boolean)
     : command.trim().split(/\s+/).filter(Boolean);
@@ -162,7 +163,13 @@ function cjsCommandArgs(command: string, args: string[], workstream?: string): s
 async function resolveFileOutputPathUnderProject(projectDir: string, filePath: string): Promise<string> {
   const projectReal = await realpath(projectDir);
   const candidate = isAbsolute(filePath) ? normalize(filePath) : resolve(projectReal, filePath);
-  const realCandidate = await realpath(candidate);
+  let realCandidate: string;
+  try {
+    realCandidate = await realpath(candidate);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`@file path not found or unreadable: ${filePath} (${reason})`);
+  }
   const rel = relative(projectReal, realCandidate);
   if (rel.startsWith('..') || (isAbsolute(rel) && rel.length > 0)) {
     throw new Error(`@file path escapes project directory: ${filePath}`);
@@ -214,7 +221,7 @@ async function projectLegacyOutput(
   try {
     return { ok: true, mode: 'json', data: await parseLegacyJsonOutput(stdout, projectDir), stderr };
   } catch {
-    return { ok: true, mode: 'text', text: stdout, stderr };
+    return { ok: true, mode: 'text', text: stdout.trim(), stderr };
   }
 }
 

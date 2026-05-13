@@ -36,6 +36,9 @@ function runStateMutationTransaction(options) {
     // CJS transforms must be synchronous: transform(mutationInput) is not awaited,
     // so Promise<string> would be coerced through later string operations as "[object Promise]".
     const modified = transform(mutationInput);
+    if (modified && typeof modified.then === 'function') {
+      throw new Error('STATE.md mutation transform must be synchronous');
+    }
     const modifiedFm = extractFrontmatter(modified);
     const existingFm = Object.keys(modifiedFm).length > 0 ? modifiedFm : originalFm;
     const body = stripFrontmatter(modified);
