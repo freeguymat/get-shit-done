@@ -137,6 +137,17 @@ describe('Runtime install plan execution', () => {
     }, /No config mutation handler registered for adapter="settings-json" operation="unknown-operation"/);
   });
 
+  test('registered config mutation adapters require their executor functions', () => {
+    const plan = createRuntimeInstallPlan({ runtime: 'copilot', scope: 'global', explicitConfigDir: '/tmp/copilot' });
+
+    assert.throws(() => {
+      applyExecutorConfigMutations(plan, {
+        configDir: plan.targetDir,
+        adapters: {},
+      });
+    }, /Missing required config mutation adapter "configureCopilotInstructions" for adapter="copilot-instructions" operation="ensure-managed-instructions"/);
+  });
+
   test('no-settings runtimes with no mutation intents are executor no-ops', () => {
     const tmp = makeTempDir('gsd-runtime-plan-trae-');
     const plan = createRuntimeInstallPlan({ runtime: 'trae', scope: 'local', cwd: tmp });

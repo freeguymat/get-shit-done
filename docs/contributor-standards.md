@@ -73,7 +73,7 @@ Currently accepted ADRs:
 | `0005-sdk-architecture-seam-map.md` | SDK Architecture seam map for query/runtime surfaces |
 | `0006-planning-path-projection-module.md` | Planning Path Projection Module for SDK query handlers |
 | `0007-sdk-package-seam-module.md` | SDK Package Seam Module owns SDK-to-get-shit-done-cc compatibility |
-| `0008-runtime-install-policy-module.md` | Runtime Install Policy Module as shared runtime data |
+| `0011-runtime-install-policy-module.md` | Runtime Install Policy Module as shared runtime data |
 
 ### When an ADR is required
 

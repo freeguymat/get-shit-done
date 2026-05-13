@@ -13,45 +13,48 @@ const path = require('path');
 
 const runtimeInstallPolicy = require('./runtime-install-policy.cjs');
 
+function configMutationHandler(requiredAdapters, handler) {
+  return Object.freeze({
+    requiredAdapters: Object.freeze(requiredAdapters),
+    handler,
+  });
+}
+
 const CONFIG_MUTATION_ADAPTER_REGISTRY = Object.freeze({
   'settings-json': Object.freeze({
-    'ensure-managed-hooks': ({ context, adapters }) => {
-      if (context.settingsPath && context.settings && adapters.writeSettings && adapters.validateHookFields) {
+    'ensure-managed-hooks': configMutationHandler(['writeSettings', 'validateHookFields'], ({ context, adapters }) => {
+      if (context.settingsPath && context.settings) {
         adapters.writeSettings(context.settingsPath, adapters.validateHookFields(context.settings));
       }
-    },
+    }),
   }),
   'opencode-json': Object.freeze({
-    'ensure-permissions': ({ context, adapters, configDir }) => {
-      if (adapters.configureOpencodePermissions) {
-        adapters.configureOpencodePermissions(context.isGlobal, configDir);
-      }
-    },
+    'ensure-permissions': configMutationHandler(['configureOpencodePermissions'], ({ context, adapters, configDir }) => {
+      adapters.configureOpencodePermissions(context.isGlobal, configDir);
+    }),
   }),
   'kilo-json': Object.freeze({
-    'ensure-permissions': ({ context, adapters, configDir }) => {
-      if (adapters.configureKiloPermissions) {
-        adapters.configureKiloPermissions(context.isGlobal, configDir);
-      }
-    },
+    'ensure-permissions': configMutationHandler(['configureKiloPermissions'], ({ context, adapters, configDir }) => {
+      adapters.configureKiloPermissions(context.isGlobal, configDir);
+    }),
   }),
   'codex-toml': Object.freeze({
-    'ensure-agent-profiles': ({ mutation, context, adapters, configDir }) => {
-      if (adapters.configureCodexToml) adapters.configureCodexToml(mutation, { ...context, configDir });
-    },
-    'ensure-managed-hook-block': ({ mutation, context, adapters, configDir }) => {
-      if (adapters.configureCodexToml) adapters.configureCodexToml(mutation, { ...context, configDir });
-    },
+    'ensure-agent-profiles': configMutationHandler(['configureCodexToml'], ({ mutation, context, adapters, configDir }) => {
+      adapters.configureCodexToml(mutation, { ...context, configDir });
+    }),
+    'ensure-managed-hook-block': configMutationHandler(['configureCodexToml'], ({ mutation, context, adapters, configDir }) => {
+      adapters.configureCodexToml(mutation, { ...context, configDir });
+    }),
   }),
   'copilot-instructions': Object.freeze({
-    'ensure-managed-instructions': ({ mutation, context, adapters, configDir }) => {
-      if (adapters.configureCopilotInstructions) adapters.configureCopilotInstructions(mutation, { ...context, configDir });
-    },
+    'ensure-managed-instructions': configMutationHandler(['configureCopilotInstructions'], ({ mutation, context, adapters, configDir }) => {
+      adapters.configureCopilotInstructions(mutation, { ...context, configDir });
+    }),
   }),
   'cline-rules': Object.freeze({
-    'ensure-runtime-rules': ({ mutation, context, adapters, configDir }) => {
-      if (adapters.configureClineRules) adapters.configureClineRules(mutation, { ...context, configDir });
-    },
+    'ensure-runtime-rules': configMutationHandler(['configureClineRules'], ({ mutation, context, adapters, configDir }) => {
+      adapters.configureClineRules(mutation, { ...context, configDir });
+    }),
   }),
 });
 
@@ -62,10 +65,27 @@ function hasConfigMutation(plan, adapter, operation = null) {
 }
 
 function getConfigMutationHandler(registry, mutation) {
+  const entry = getConfigMutationEntry(registry, mutation);
+  if (typeof entry === 'function') return entry;
+  return entry && typeof entry.handler === 'function' ? entry.handler : null;
+}
+
+function getConfigMutationEntry(registry, mutation) {
   if (!registry || !mutation) return null;
   const adapterRegistry = registry[mutation.adapter];
   if (!adapterRegistry) return null;
   return adapterRegistry[mutation.operation] || adapterRegistry['*'] || null;
+}
+
+function assertRequiredAdapters(entry, mutation, adapters) {
+  if (!entry || typeof entry === 'function') return;
+  for (const adapterName of entry.requiredAdapters || []) {
+    if (typeof adapters[adapterName] !== 'function') {
+      throw new Error(
+        `Missing required config mutation adapter "${adapterName}" for adapter="${mutation.adapter}" operation="${mutation.operation}"`
+      );
+    }
+  }
 }
 
 function applyConfigMutations(plan, context = {}) {
@@ -75,12 +95,14 @@ function applyConfigMutations(plan, context = {}) {
   const registry = context.configMutationAdapterRegistry || CONFIG_MUTATION_ADAPTER_REGISTRY;
 
   for (const mutation of plan.configMutations) {
+    const entry = getConfigMutationEntry(registry, mutation);
     const handler = getConfigMutationHandler(registry, mutation);
     if (!handler) {
       throw new Error(
         `No config mutation handler registered for adapter="${mutation.adapter}" operation="${mutation.operation}"`
       );
     }
+    assertRequiredAdapters(entry, mutation, adapters);
     handler({ mutation, context, adapters, configDir });
   }
 }

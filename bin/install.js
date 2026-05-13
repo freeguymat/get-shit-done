@@ -3054,10 +3054,8 @@ function stripLeakedGsdCodexSections(content) {
  * Pure function, exported for test coverage. Returns the input unchanged
  * if no GSD-managed hook section is present.
  */
-// Legacy hook command basenames to detect during strip. Template-literal
-// form so install-hooks-copy.test.cjs's quoted-literal guard continues to
-// catch accidental regressions where someone *registers* the inverted
-// `gsd-update-check.js` filename in a Codex hook command.
+// Legacy hook command basenames to detect during strip. Keep these as
+// template literals so exact quoted command registrations are easy to review.
 const STALE_HOOK_BASENAMES = new Set([
   `gsd-update-check.js`,
   `gsd-check-update.js`,
@@ -8964,7 +8962,12 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   // {type: 'command', command: null} items that the runtime hook schema
   // rejects at parse time. validateHookFields filters those out so the file
   // we write is always schema-valid.
-  applyConfigMutations(installPlan, {
+  const finalizationConfigMutations = (installPlan.configMutations || []).filter(mutation =>
+    mutation.adapter === 'settings-json' ||
+    mutation.adapter === 'opencode-json' ||
+    mutation.adapter === 'kilo-json'
+  );
+  applyConfigMutations({ ...installPlan, configMutations: finalizationConfigMutations }, {
     isGlobal,
     configDir,
     settingsPath,
