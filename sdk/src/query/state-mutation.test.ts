@@ -1195,4 +1195,54 @@ status: executing
     expect(typeof data.reason).toBe('string');
     expect(String(data.reason)).toContain('Could not determine current phase');
   });
+
+  it('prefers frontmatter.current_phase over body and progress fallbacks', async () => {
+    const stateContent = `---
+gsd_state_version: 1.0
+milestone: v1.1
+status: executing
+current_phase: 20
+progress:
+  total_phases: 30
+  completed_phases: 12
+---
+
+# Session State
+
+**Current Phase:** 5
+`;
+    await setupTestProject(tmpDir, stateContent);
+    const { statePrune } = await import('./state-mutation.js');
+    const result = await statePrune(['--keep-recent', '3', '--dry-run'], tmpDir);
+    const data = result.data as Record<string, unknown>;
+
+    expect(data.pruned).toBe(false);
+    expect(data.dry_run).toBe(true);
+    expect(data.cutoff_phase).toBe(17);
+  });
+
+  it('uses progress.total_phases when higher-priority phase sources are missing or invalid', async () => {
+    const stateContent = `---
+gsd_state_version: 1.0
+milestone: v1.1
+status: executing
+current_phase: not-a-number
+progress:
+  completed_phases: nope
+  total_phases: 21
+---
+
+# Session State
+
+**Current Phase:** unknown
+`;
+    await setupTestProject(tmpDir, stateContent);
+    const { statePrune } = await import('./state-mutation.js');
+    const result = await statePrune(['--keep-recent', '3', '--dry-run'], tmpDir);
+    const data = result.data as Record<string, unknown>;
+
+    expect(data.pruned).toBe(false);
+    expect(data.dry_run).toBe(true);
+    expect(data.cutoff_phase).toBe(18);
+  });
 });
