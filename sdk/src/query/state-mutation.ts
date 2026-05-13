@@ -1643,7 +1643,7 @@ export const statePrune: QueryHandler = async (args, projectDir, workstream) => 
     return {
       data: {
         pruned: false,
-        reason: 'Could not determine current phase from STATE.md. Add **Current Phase:** N, frontmatter current_phase: N, or progress.completed_phases.',
+        reason: 'Could not determine current phase from STATE.md. Add **Current Phase:** N, frontmatter current_phase: N, progress.completed_phases, or progress.total_phases.',
       },
     };
   }
