@@ -91,7 +91,7 @@ An ADR is optional (a comment in the relevant issue or PR is sufficient) when:
 
 **New ADRs and PRDs use issue#-prefix slug naming. This is a contributor requirement, not a suggestion.**
 
-```
+```text
 docs/adr/<issue#>-<kebab-slug>.md    (new ADRs)
 docs/prd/<issue#>-<kebab-slug>.md    (new PRDs)
 ```

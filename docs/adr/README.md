@@ -8,7 +8,7 @@ Each ADR documents one architectural decision: what was decided, why, and what c
 
 New ADRs use **issue#-prefix slug** naming:
 
-```
+```text
 docs/adr/<issue#>-<kebab-slug>.md
 ```
 

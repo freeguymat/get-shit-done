@@ -8,7 +8,7 @@ A PRD captures the **what** and **why** of a feature before implementation begin
 
 PRDs use the same issue#-prefix slug naming as ADRs:
 
-```
+```text
 docs/prd/<issue#>-<kebab-slug>.md
 ```
 

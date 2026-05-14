@@ -67,7 +67,7 @@ A feature adds something new — a new command, a new workflow, a new concept, a
 
 ---
 
-### 📐 ADR or PRD
+### 📐 Proposing an ADR or PRD
 
 An ADR (Architecture Decision Record) documents a significant architectural decision. A PRD (Product Requirements Document) captures the what and why of a feature before implementation. Both are governed by the same issue-first rule as everything else.
 
