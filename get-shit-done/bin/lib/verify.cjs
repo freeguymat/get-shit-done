@@ -5,7 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { safeReadFile, loadConfig, normalizePhaseName, escapeRegex, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error, checkAgentsInstalled, CONFIG_DEFAULTS, inspectWorktreeHealth } = require('./core.cjs');
+const { loadConfig, normalizePhaseName, escapeRegex, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error, checkAgentsInstalled, CONFIG_DEFAULTS, inspectWorktreeHealth } = require('./core.cjs');
+const { execGit, platformReadSync: safeReadFile, platformWriteSync } = require('./shell-command-projection.cjs');
 const { planningDir } = require('./planning-workspace.cjs');
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
@@ -68,8 +69,8 @@ function cmdVerifySummary(cwd, summaryPath, checkFileCount, raw) {
   let commitsExist = false;
   if (hashes.length > 0) {
     for (const hash of hashes.slice(0, 3)) {
-      const result = execGit(cwd, ['cat-file', '-t', hash]);
-      if (result.exitCode === 0 && result.stdout === 'commit') {
+      const result = execGit(['cat-file', '-t', hash], { cwd });
+      if (result.exitCode === 0 && result.stdout.trim() === 'commit') {
         commitsExist = true;
         break;
       }
@@ -265,7 +266,7 @@ function cmdVerifyCommits(cwd, hashes, raw) {
   const valid = [];
   const invalid = [];
   for (const hash of hashes) {
-    const result = execGit(cwd, ['cat-file', '-t', hash]);
+    const result = execGit(['cat-file', '-t', hash], { cwd });
     if (result.exitCode === 0 && result.stdout.trim() === 'commit') {
       valid.push(hash);
     } else {
@@ -1019,7 +1020,7 @@ function cmdValidateHealth(cwd, options, raw) {
               parallelization: CONFIG_DEFAULTS.parallelization,
               brave_search: CONFIG_DEFAULTS.brave_search,
             };
-            fs.writeFileSync(configPath, JSON.stringify(defaults, null, 2), 'utf-8');
+            platformWriteSync(configPath, JSON.stringify(defaults, null, 2));
             repairActions.push({ action: repair, success: true, path: 'config.json' });
             break;
           }
@@ -1057,7 +1058,7 @@ function cmdValidateHealth(cwd, options, raw) {
                 if (!configParsed.workflow) configParsed.workflow = {};
                 if (configParsed.workflow.nyquist_validation === undefined) {
                   configParsed.workflow.nyquist_validation = true;
-                  fs.writeFileSync(configPath, JSON.stringify(configParsed, null, 2), 'utf-8');
+                  platformWriteSync(configPath, JSON.stringify(configParsed, null, 2));
                 }
                 repairActions.push({ action: repair, success: true, path: 'config.json' });
               } catch (err) {
@@ -1074,7 +1075,7 @@ function cmdValidateHealth(cwd, options, raw) {
                 if (!configParsed.workflow) configParsed.workflow = {};
                 if (configParsed.workflow.ai_integration_phase === undefined) {
                   configParsed.workflow.ai_integration_phase = true;
-                  fs.writeFileSync(configPath, JSON.stringify(configParsed, null, 2), 'utf-8');
+                  platformWriteSync(configPath, JSON.stringify(configParsed, null, 2));
                 }
                 repairActions.push({ action: repair, success: true, path: 'config.json' });
               } catch (err) {
@@ -1090,7 +1091,7 @@ function cmdValidateHealth(cwd, options, raw) {
             for (const ver of missingFromRegistry) {
               try {
                 const snapshotPath = path.join(milestonesArchiveDir, `${ver}-ROADMAP.md`);
-                const snapshot = fs.existsSync(snapshotPath) ? fs.readFileSync(snapshotPath, 'utf-8') : null;
+                const snapshot = safeReadFile(snapshotPath);
                 // Build minimal entry from snapshot title or version
                 const titleMatch = snapshot && snapshot.match(/^#\s+(.+)$/m);
                 const milestoneName = titleMatch ? titleMatch[1].replace(/^Milestone\s+/i, '').replace(/^v[\d.]+\s*/, '').trim() : ver;
@@ -1099,15 +1100,15 @@ function cmdValidateHealth(cwd, options, raw) {
                   ? fs.readFileSync(milestonesPath, 'utf-8')
                   : '';
                 if (!milestonesContent.trim()) {
-                  fs.writeFileSync(milestonesPath, `# Milestones\n\n${entry}`, 'utf-8');
+                  platformWriteSync(milestonesPath, `# Milestones\n\n${entry}`);
                 } else {
                   const headerMatch = milestonesContent.match(/^(#{1,3}\s+[^\n]*\n\n?)/);
                   if (headerMatch) {
                     const header = headerMatch[1];
                     const rest = milestonesContent.slice(header.length);
-                    fs.writeFileSync(milestonesPath, header + entry + rest, 'utf-8');
+                    platformWriteSync(milestonesPath, header + entry + rest);
                   } else {
-                    fs.writeFileSync(milestonesPath, entry + milestonesContent, 'utf-8');
+                    platformWriteSync(milestonesPath, entry + milestonesContent);
                   }
                 }
                 backfilled++;
@@ -1226,7 +1227,7 @@ function cmdVerifySchemaDrift(cwd, phaseArg, skipFlag, raw) {
   }
 
   // Also check git commit messages for push evidence
-  const gitLog = execGit(cwd, ['log', '--oneline', '--all', '-50']);
+  const gitLog = execGit(['log', '--oneline', '--all', '-50'], { cwd });
   if (gitLog.exitCode === 0) {
     executionLog += '\n' + gitLog.stdout;
   }
@@ -1288,7 +1289,7 @@ function cmdVerifyCodebaseDrift(cwd, raw) {
     const lastMapped = drift.readMappedCommit(structurePath);
 
     // Verify we're inside a git repo and resolve the diff range.
-    const revProbe = execGit(cwd, ['rev-parse', 'HEAD']);
+    const revProbe = execGit(['rev-parse', 'HEAD'], { cwd });
     if (revProbe.exitCode !== 0) {
       emit({
         skipped: true,
@@ -1307,11 +1308,11 @@ function cmdVerifyCodebaseDrift(cwd, raw) {
       base = EMPTY_TREE;
     } else {
       // Verify the commit is reachable; if not, fall back to EMPTY_TREE.
-      const verify = execGit(cwd, ['cat-file', '-t', base]);
+      const verify = execGit(['cat-file', '-t', base], { cwd });
       if (verify.exitCode !== 0) base = EMPTY_TREE;
     }
 
-    const diff = execGit(cwd, ['diff', '--name-status', base, 'HEAD']);
+    const diff = execGit(['diff', '--name-status', base, 'HEAD'], { cwd });
     if (diff.exitCode !== 0) {
       emit({
         skipped: true,
