@@ -614,6 +614,34 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `DEFECT.GENERATIVE-FIX=for any new constant/array/parser shared between CJS and SDK (or between two workflow surfaces), the same commit MUST add a parity assertion that fails when the two diverge`
 `DEFECT.GENERATIVE-EXEMPLAR=tests/config-schema-sdk-parity.test.cjs (asserts SDK VALID_CONFIG_KEYS == CJS VALID_CONFIG_KEYS); tests/bug-3298-phase-dir-prefix-drift-in-workflows.test.cjs (asserts every workflow surface uses expected_phase_dir)`
 
+`CR.MD040-NEW-MD.symptom=newly-added fenced code block in a hand-edited .md file (Edit/Write tool, not platformWriteSync) opens with bare ``` instead of ```text/```bash/```js/etc; CodeRabbit flags MD040 as 🟡 Quick win`
+`CR.MD040-NEW-MD.examples=#3487 — three new fences (docs/adr/README.md L11, docs/contributor-standards.md L94, docs/prd/README.md L11) all flagged in same review pass`
+`CR.MD040-NEW-MD.detect=before push — grep -nE "^\`\`\`$" against your touched files; opening fences (the ones followed by content) need a language token, closing fences stay bare`
+`CR.MD040-NEW-MD.fix-forward=add language to opening fence — `text` for filenames/paths/placeholders, `bash` for shell, `js`/`cjs`/`ts` for code, `json`/`yaml` for config, `diff` for diffs, `md` for markdown samples`
+`CR.MD040-NEW-MD.root-cause=platformWriteSync._normalizeMd auto-fixes MD022/MD031/MD032/MD012/MD047 for .md writes via the seam, but does NOT inject fence language tokens; Edit/Write tool calls bypass even that normalizer entirely`
+
+`CR.HEADING-ANCHOR-DRIFT.symptom=cross-references like ../../CONTRIBUTING.md#proposing-an-adr-or-prd resolve to nothing because the heading text was renamed/abbreviated and its GitHub-rendered slug no longer matches`
+`CR.HEADING-ANCHOR-DRIFT.examples=#3487 — heading "### 📐 ADR or PRD" produced GitHub slug #adr-or-prd; cross-refs from docs/adr/README.md, docs/prd/README.md, docs/contributor-standards.md all targeted #proposing-an-adr-or-prd; all 3 silently broken until CR caught it`
+`CR.HEADING-ANCHOR-DRIFT.detect=GitHub slug rules — lowercase, strip emojis, strip punctuation, spaces→hyphens; before push, compute slug for any new heading and grep -rn "#<slug>" repo-wide to verify cross-refs match`
+`CR.HEADING-ANCHOR-DRIFT.fix-forward=usually rename the heading so its slug matches existing cross-refs (1 change vs N referrer updates); CR catches as 🟡 Quick win but pre-push grep avoids the round-trip`
+
+`CR.AUTO-RESOLVE-ON-PUSH.behavior=CodeRabbit re-reviews on each new commit; threads where the flagged issue is addressed auto-flip to isResolved=true + isOutdated=true within ~30-90s; new "actionable comments: 0 🎉" summary comment posts when clean`
+`CR.AUTO-RESOLVE-ON-PUSH.implication=do NOT manually resolveReviewThread via GraphQL after pushing fixes — wasted GraphQL call, and races CR's own re-resolution; verify outcome with gh api graphql query reviewThreads { isResolved isOutdated } after the next CR cycle`
+
+`DEFECT.DOCS-PR-TEMPLATE-PATH.symptom=docs-only PR that changes contributor-facing process (CONTRIBUTING.md, docs/contributor-standards.md, docs/adr/README.md, docs/prd/README.md, etc.) opens with the default pull_request_template.md per its doc-only carve-out`
+`DEFECT.DOCS-PR-TEMPLATE-PATH.examples=#3487 — first push used default template with carve-out justification; gsd-pr-template-policy bot posted "PR body does not match the fix, enhancement, or feature template" within seconds; "Pull request template format" check was failing`
+`DEFECT.DOCS-PR-TEMPLATE-PATH.detect=any PR that touches the contributor-process docs is NOT eligible for the default-template carve-out; the carve-out is for CI/tooling/dependency PRs with no linked issue`
+`DEFECT.DOCS-PR-TEMPLATE-PATH.fix-forward=use enhancement.md template; ensure linked issue carries approved-enhancement (issue may have been opened with documentation only — add enhancement + approved-enhancement labels too); rewrite PR body in enhancement structure (Linked Issue / What this enhancement improves / Before-After / How implemented / Testing / Scope confirmation / Checklist / Breaking changes)`
+
+`DEFECT.NO-CHANGELOG-MISAPPLIED.symptom=docs-only PR labeled no-changelog because "no code surface touched"; reality is contributor-facing process change that contributors will hit as a PR rejection if not surfaced in CHANGELOG`
+`DEFECT.NO-CHANGELOG-MISAPPLIED.examples=#3487 (ADR/PRD naming convention) — initially shipped with no-changelog because none of bin/ get-shit-done/ agents/ commands/ hooks/ sdk/src/ were touched; corrected to .changeset/zesty-goats-dart.md type:Changed after maintainer caught it`
+`DEFECT.NO-CHANGELOG-MISAPPLIED.detect=Changeset Required workflow only fires on the gated paths above, so docs-only PRs pass CI without a fragment; CONTRIBUTING.md L126 explicit rule is "When unsure whether a change is user-facing, add the fragment" — contributors are a user class`
+`DEFECT.NO-CHANGELOG-MISAPPLIED.fix-forward=remove no-changelog label; npm run changeset -- --type Changed --pr <N> --body "<one-sentence contributor-facing summary>"; commit fragment as separate commit on the same branch; verify PR labels show no-changelog gone before merge`
+
+`CR.GENERATIVE-PRIORITY=hand-edited markdown additions and "doc-only" PRs share a root: they bypass the seam-level normalizer (platformWriteSync._normalizeMd) and the typed-template gate (CONTRIBUTING.md fix/enhancement/feature path), so failures only surface at CR/bot review time`
+`CR.GENERATIVE-FIX=before opening any docs PR, run a 3-step pre-flight — (1) grep your touched files for ^\`\`\`$ and add language tags to opening fences, (2) compute the GitHub slug for any new headings (lowercase, strip emojis/punctuation, spaces→hyphens) and grep the repo for cross-refs to that slug, (3) decide if the change is contributor-facing → if yes, use enhancement template + Changed changeset + approved-enhancement label on issue, do NOT use the default-template doc-only carve-out`
+`CR.GENERATIVE-EXEMPLAR=#3487 hit all 5 of the above issues in the same PR; one push round-trip per fix; total ~20min wasted that pre-flight would have caught`
+
 ### Shell Command Projection Module
 Module owning all OS-facing I/O for the tool: runtime-aware command-text rendering (hook commands, PATH action lines, shim scripts), subprocess dispatch (`execGit`, `execNpm`, `execTool`, `probeTty`), and platform file I/O (`platformWriteSync`, `platformReadSync`, `platformEnsureDir`). Single seam for platform-conditional logic — one place to fix any shell or file write regression across Windows, macOS, and Linux. Lives in `get-shit-done/bin/lib/shell-command-projection.cjs`. See ADR-0009.
 
