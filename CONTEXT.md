@@ -1,252 +1,216 @@
 # Context
 
-## Domain terms
+`MODULE.DISPATCH-POLICY.purpose=owns dispatch error mapping, fallback policy, timeout classification, CLI exit mapping contract`
+`MODULE.DISPATCH-POLICY.error-kinds=[unknown_command, native_failure, native_timeout, fallback_failure, validation_error, internal_error]`
+`MODULE.DISPATCH-POLICY.adr=ADR-0001`
 
-### Dispatch Policy Module
-Module owning dispatch error mapping, fallback policy, timeout classification, and CLI exit mapping contract.
+`MODULE.COMMAND-DEFINITION.purpose=canonical command metadata Interface powering alias, catalog, semantics generation`
 
-Canonical error kind set:
-- `unknown_command`
-- `native_failure`
-- `native_timeout`
-- `fallback_failure`
-- `validation_error`
-- `internal_error`
+`MODULE.QUERY-RUNTIME-CONTEXT.purpose=owns query-time context resolution for projectDir and ws (precedence + validation policy used by query adapters)`
 
-### Command Definition Module
-Canonical command metadata Interface powering alias, catalog, and semantics generation.
+`MODULE.NATIVE-DISPATCH-ADAPTER.purpose=Adapter satisfying native query dispatch at the Dispatch Policy seam so policy modules consume a focused dispatch Interface instead of closure-wired call sites`
 
-### Query Runtime Context Module
-Module owning query-time context resolution for `projectDir` and `ws`, including precedence and validation policy used by query adapters.
+`MODULE.QUERY-CLI-OUTPUT.purpose=owns projection from dispatch results/errors to CLI {exitCode, stdoutChunks, stderrLines} output contract`
 
-### Native Dispatch Adapter Module
-Adapter Module that satisfies native query dispatch at the Dispatch Policy seam, so policy modules consume a focused dispatch Interface instead of closure-wired call sites.
+`MODULE.STATE-MD-DOCUMENT.purpose=shared CJS/SDK pure transform owning STATE.md parse, field extraction, field replacement, status normalization, frontmatter reconstruction`
+`MODULE.STATE-MD-DOCUMENT.boundaries=does NOT scan .planning/phases; does NOT own persistence or locking; phase/plan/summary counts arrive from inventory/progress modules as inputs; CJS/SDK read-modify-write paths remain Adapters`
 
-### Query CLI Output Module
-Module owning projection from dispatch results/errors to CLI `{ exitCode, stdoutChunks, stderrLines }` output contract.
+`MODULE.QUERY-EXECUTION-POLICY.purpose=owns query transport routing policy projection (preferNative, fallback policy, workstream subprocess forcing) at execution seam`
 
-### STATE.md Document Module
-Shared CJS/SDK pure transform Module owning STATE.md parse, field extraction, field replacement, status normalization, and frontmatter reconstruction. It does not scan `.planning/phases` and does not own persistence or locking; phase/plan/summary counts arrive from inventory/progress Modules as inputs, and CJS/SDK read-modify-write paths remain Adapters.
+`MODULE.QUERY-SUBPROCESS-ADAPTER.purpose=Adapter owning subprocess execution contract for query commands (JSON/raw invocation, @file: indirection parsing, timeout/exit error projection)`
 
-### Query Execution Policy Module
-Module owning query transport routing policy projection (`preferNative`, fallback policy, workstream subprocess forcing) at execution seam.
+`MODULE.QUERY-COMMAND-RESOLUTION.purpose=canonical command normalization and resolution Interface (query-command-resolution-strategy) used by internal query/transport paths after dead-wrapper convergence`
 
-### Query Subprocess Adapter Module
-Adapter Module owning subprocess execution contract for query commands (JSON/raw invocation, `@file:` indirection parsing, timeout/exit error projection).
+`MODULE.COMMAND-TOPOLOGY.purpose=owns command resolution, policy projection (mutation, output_mode), unknown-command diagnosis, handler Adapter binding at one seam for query dispatch`
 
-### Query Command Resolution Module
-Canonical command normalization and resolution Interface (`query-command-resolution-strategy`) used by internal query/transport paths after dead-wrapper convergence.
+`MODULE.CJS-COMMAND-ROUTER-ADAPTER.purpose=compatibility Adapter for gsd-tools.cjs command families; uses generated command metadata + small argument shapers to route to CJS handlers rather than calling SDK Command Topology directly; preserves CJS compatibility startup while reducing hand-written router drift`
 
-### Command Topology Module
-Module owning command resolution, policy projection (`mutation`, `output_mode`), unknown-command diagnosis, and handler Adapter binding at one seam for query dispatch.
+`MODULE.QUERY-PRE-PROJECT-CONFIG-POLICY.purpose=defines query-time behavior when .planning/config.json is absent: use built-in defaults for parity-sensitive query Interfaces; emit parity-aligned empty model ids for pre-project model resolution surfaces`
 
-### CJS Command Router Adapter Module
-Compatibility Adapter Module for `gsd-tools.cjs` command families. Uses generated command metadata plus small argument shapers to route to CJS handlers, rather than calling SDK Command Topology directly. Preserves CJS compatibility startup while reducing hand-written router drift.
+`MODULE.PLANNING-WORKSPACE.purpose=owns .planning path resolution, active workstream pointer policy (session-scoped > shared), pointer self-heal behavior, planning lock semantics for workstream-aware execution`
+`MODULE.PLANNING-WORKSPACE.adr=ADR-0004`
 
-### Query Pre-Project Config Policy Module
-Module policy that defines query-time behavior when `.planning/config.json` is absent: use built-in defaults for parity-sensitive query Interfaces, and emit parity-aligned empty model ids for pre-project model resolution surfaces.
+`MODULE.WORKSTREAM-INVENTORY.purpose=shared CJS/SDK module owning workstream directory discovery, per-workstream state projection, phase/plan/summary counting, roadmap-declared phase count, active marker projection, active-workstream collision inputs`
+`MODULE.WORKSTREAM-INVENTORY.consumer-rule=command handlers render list/status/progress outputs from this inventory instead of rescanning .planning/workstreams/* directly`
 
-### Planning Workspace Module
-Module owning `.planning` path resolution, active workstream pointer policy (`session-scoped > shared`), pointer self-heal behavior, and planning lock semantics for workstream-aware execution.
+`MODULE.PLANNING-PATH-PROJECTION.purpose=SDK query module owning projection from project/workstream context to concrete .planning paths`
+`MODULE.PLANNING-PATH-PROJECTION.precedence=explicit workstream > env workstream > env project > root`
+`MODULE.PLANNING-PATH-PROJECTION.invalid-context=validation error at this seam, NOT a silent fallback`
+`MODULE.PLANNING-PATH-PROJECTION.adr=ADR-0006`
 
-### Workstream Inventory Module
-Shared CJS/SDK Module owning workstream directory discovery, per-workstream state projection, phase/plan/summary counting, roadmap-declared phase count, active marker projection, and active-workstream collision inputs. Command handlers render list/status/progress outputs from this inventory instead of rescanning `.planning/workstreams/*` directly.
+`MODULE.WORKTREE-ROOT-RESOLUTION-ADAPTER.purpose=Adapter owning linked-worktree root mapping and metadata-prune policy (git worktree prune non-destructive default) for planning/workstream callers`
 
-### Planning Path Projection Module
-SDK query Module owning projection from project/workstream context to concrete `.planning` paths. Policy precedence is `explicit workstream > env workstream > env project > root`. Invalid workspace context is a validation error at this seam rather than a silent fallback.
+`MODULE.SDK-PACKAGE-SEAM.purpose=owns SDK-to-get-shit-done-cc compatibility policy: legacy asset discovery, install-layout probing, transition-only error messaging, thin Adapter access for CJS-era assets that native SDK modules have not replaced yet`
+`MODULE.SDK-PACKAGE-SEAM.adr=ADR-0007`
 
-### Worktree Root Resolution Adapter Module
-Adapter Module owning linked-worktree root mapping and metadata-prune policy (`git worktree prune` non-destructive default) for planning/workstream callers.
+`MODULE.RUNTIME-GLOBAL-SKILLS-POLICY.purpose=owns runtime-aware global skills directory policy for SDK query surfaces; resolves runtime-global skills bases/skill paths from runtime + env precedence; renders display paths for warnings/manifests; reports unsupported runtimes with no skills directory`
 
-### SDK Package Seam Module
-Module owning SDK-to-`get-shit-done-cc` compatibility policy: legacy asset discovery, install-layout probing, transition-only error messaging, and thin Adapter access for CJS-era assets that native SDK Modules have not replaced yet.
+`MODULE.INSTALLER-MIGRATION-AUTHORING-GUARD.purpose=owns validation for Installer Migration Module records and planned actions; enforces migration metadata, explicit install scopes, ownership evidence for destructive/config actions, runtime contract citations for runtime config rewrites before a migration can enter planning or apply`
 
-### Runtime-Global Skills Policy Module
-Module owning runtime-aware global skills directory policy for SDK query surfaces. Resolves runtime-global skills bases/skill paths from runtime + env precedence, renders display paths for warnings/manifests, and reports unsupported runtimes with no skills directory.
+`MODULE.SKILL-SURFACE-BUDGET.purpose=owns which skills and agents are written to runtime config directories at install time (Phase 1) and at runtime via cluster-level toggles (Phase 2)`
+`MODULE.SKILL-SURFACE-BUDGET.phase-1-impl=get-shit-done/bin/lib/install-profiles.cjs defines named profiles (core, standard, full); computes transitive closure over requires: frontmatter; stages skills/agents to runtime config dirs; persists chosen profile in .gsd-profile marker`
+`MODULE.SKILL-SURFACE-BUDGET.profile-precedence=explicit --profile= flag > .gsd-profile marker > full`
+`MODULE.SKILL-SURFACE-BUDGET.back-compat-aliases=--minimal and --core-only are aliases for --profile=core`
+`MODULE.SKILL-SURFACE-BUDGET.phase-2-impl=get-shit-done/bin/lib/surface.cjs implements /gsd:surface for cluster-level enable/disable without reinstall; cluster definitions in get-shit-done/bin/lib/clusters.cjs; per-runtime state persists in <runtimeConfigDir>/.gsd-surface.json independent from .gsd-profile marker`
+`MODULE.SKILL-SURFACE-BUDGET.adr=ADR-0011`
 
-### Installer Migration Authoring Guard Module
-Module owning validation for Installer Migration Module records and planned actions. It enforces migration metadata, explicit install scopes, ownership evidence for destructive/config actions, and runtime contract citations for runtime config rewrites before a migration can enter planning or apply.
+`MODULE.SHELL-COMMAND-PROJECTION.purpose=owns all OS-facing I/O for the tool: runtime-aware command-text rendering (hook commands, PATH action lines, shim scripts), subprocess dispatch (execGit/execNpm/execTool/probeTty), platform file I/O (platformWriteSync/platformReadSync/platformEnsureDir)`
+`MODULE.SHELL-COMMAND-PROJECTION.location=get-shit-done/bin/lib/shell-command-projection.cjs`
+`MODULE.SHELL-COMMAND-PROJECTION.role=single seam for platform-conditional logic — one place to fix any shell or file write regression across Windows/macOS/Linux`
+`MODULE.SHELL-COMMAND-PROJECTION.adr=ADR-0009`
 
-### Skill Surface Budget Module
-Module owning which skills and agents are written to runtime config directories at install time (Phase 1) and at runtime via cluster-level toggles (Phase 2). Phase 1: `get-shit-done/bin/lib/install-profiles.cjs` defines named profiles (`core`, `standard`, `full`), computes transitive closure over `requires:` frontmatter, stages skills/agents to runtime config dirs, and persists the chosen profile in a `.gsd-profile` marker. Profile resolution precedence: explicit `--profile=` flag > `.gsd-profile` marker > `full`. `--minimal`/`--core-only` are back-compat aliases for `--profile=core`. Phase 2: `get-shit-done/bin/lib/surface.cjs` implements the `/gsd:surface` slash command for cluster-level enable/disable without reinstall; cluster definitions live in `get-shit-done/bin/lib/clusters.cjs`; per-runtime state persists in `<runtimeConfigDir>/.gsd-surface.json` independent from the `.gsd-profile` marker. See ADR-0011.
+`METHOD.MVP-MODE.def=phase-level planning mode that frames work as a vertical slice (UI → API → DB) of one user-visible capability instead of horizontal layers`
+`METHOD.MVP-MODE.precedence=--mvp CLI flag > ROADMAP.md **Mode:** mvp field > workflow.mvp_mode config > false`
+`METHOD.MVP-MODE.scope=all-or-nothing per phase (PRD #2826 Q1)`
+`METHOD.MVP-MODE.surface=MVP_MODE=true|false to planner, executor, verifier, discovery surfaces (progress, stats, graphify)`
+`METHOD.MVP-MODE.canonical-parser=roadmap.cjs **Mode:** field; resolution chain in workflows/plan-phase.md`
+`METHOD.MVP-MODE.concept-index=references/mvp-concepts.md`
 
-### MVP Mode
-Phase-level planning mode that frames work as a vertical slice (UI → API → DB) of one user-visible capability instead of horizontal layers. Resolved at workflow init via the precedence chain: `--mvp` CLI flag → ROADMAP.md `**Mode:** mvp` field → `workflow.mvp_mode` config → false. All-or-nothing per phase (PRD #2826 Q1). Surfaced as `MVP_MODE=true|false` to the planner, executor, verifier, and discovery surfaces (progress, stats, graphify). Canonical parser: `roadmap.cjs` `**Mode:**` field; canonical resolution chain documented in `workflows/plan-phase.md`. Concept index: `references/mvp-concepts.md`.
+`METHOD.USER-STORY.def=phase-goal format under MVP Mode: "As a [role], I want to [capability], so that [outcome]."`
+`METHOD.USER-STORY.regex=/^As a .+, I want to .+, so that .+\.$/`
+`METHOD.USER-STORY.consumer-planner=gsd-planner emits as bolded ## Phase Goal header in PLAN.md`
+`METHOD.USER-STORY.consumer-verifier=gsd-verifier — [outcome] clause is the goal-backward verification anchor`
+`METHOD.USER-STORY.authoring=interactive via /gsd-mvp-phase; SPIDR Splitting validates when too large`
 
-### User Story
-Phase-goal format under MVP Mode: `As a [role], I want to [capability], so that [outcome].` Required regex shape: `/^As a .+, I want to .+, so that .+\.$/`. Used as the framing input by `gsd-planner` (emits as bolded `## Phase Goal` header in PLAN.md) and as the verification target by `gsd-verifier` (the `[outcome]` clause is the goal-backward verification anchor). Authored interactively by `/gsd-mvp-phase`, validated by SPIDR Splitting when too large.
+`METHOD.WALKING-SKELETON.def=Phase 1 deliverable under --mvp on a new project: thinnest end-to-end stack proving every layer (framework, DB, routing, deployment) works together`
+`METHOD.WALKING-SKELETON.artifact=SKELETON.md capturing architectural decisions subsequent vertical slices inherit`
+`METHOD.WALKING-SKELETON.gate=phase_number == "01" AND prior_summaries == 0 AND MVP_MODE=true`
+`METHOD.WALKING-SKELETON.scope=intentionally narrow (PRD #2826 Q2); does not retrofit existing projects`
 
-### Walking Skeleton
-Phase 1 deliverable under `--mvp` on a new project: the thinnest end-to-end stack proving every layer (framework, DB, routing, deployment) works together. Emitted as `SKELETON.md` capturing the architectural decisions subsequent vertical slices inherit. Gate fires when `phase_number == "01"` AND `prior_summaries == 0` AND `MVP_MODE=true`. Scope intentionally narrow (PRD #2826 Q2) — does not retrofit existing projects.
+`METHOD.VERTICAL-SLICE.def=single-feature task that moves one user capability open-to-close (happy path) end-to-end`
+`METHOD.VERTICAL-SLICE.contrast=horizontal layer (all models then all APIs then all UI)`
+`METHOD.VERTICAL-SLICE.role=MVP Mode planning unit; SPIDR Splitting axes (Spike/Paths/Interfaces/Data/Rules) are canonical decomposition tools when a slice is too large for one phase`
 
-### Vertical Slice
-Single-feature task that moves one user capability from open-to-close (happy path) end-to-end. Contrast with the horizontal layer (all models, then all APIs, then all UI). The MVP Mode planning unit; SPIDR Splitting axes (Spike, Paths, Interfaces, Data, Rules) are the canonical decomposition tools when a slice is too large for one phase.
+`METHOD.BEHAVIOR-ADDING-TASK.def=predicate over a PLAN.md task: tdd="true" frontmatter AND <behavior> block names a user-visible outcome AND <files> includes ≥1 non-*.md/*.json/*.test.* source file`
+`METHOD.BEHAVIOR-ADDING-TASK.exempt=pure doc/config/test-only tasks`
+`METHOD.BEHAVIOR-ADDING-TASK.gate-consumer=MVP+TDD Gate (references/execute-mvp-tdd.md) only halts on this predicate; gsd-executor applies all three checks at runtime`
+`METHOD.BEHAVIOR-ADDING-TASK.implementation=prose-only specification — no shared utility`
 
-### Behavior-Adding Task
-Predicate over a PLAN.md task: `tdd="true"` frontmatter AND `<behavior>` block names a user-visible outcome AND `<files>` includes at least one non-`*.md` / non-`*.json` / non-`*.test.*` source file. Pure doc/config/test-only tasks are exempt. The MVP+TDD Gate (in `references/execute-mvp-tdd.md`) only halts execution on this predicate; the gsd-executor agent applies all three checks at runtime. Currently a prose-only specification — no shared utility.
+`METHOD.MVP-PLUS-TDD-GATE.def=per-task runtime gate in /gsd-execute-phase that, when MVP_MODE && TDD_MODE both true, refuses to advance a Behavior-Adding Task until a failing-test commit (test({phase}-{plan})) exists for it`
+`METHOD.MVP-PLUS-TDD-GATE.checkpoint=tdd_review_checkpoint end-of-phase review escalates from advisory to blocking under same condition`
+`METHOD.MVP-PLUS-TDD-GATE.contract=references/execute-mvp-tdd.md`
+`METHOD.MVP-PLUS-TDD-GATE.escape-hatch=--force-mvp-gate (documented but not implemented)`
 
-### MVP+TDD Gate
-Per-task runtime gate in `/gsd-execute-phase` that, when both `MVP_MODE` and `TDD_MODE` are true, refuses to advance a Behavior-Adding Task until a failing-test commit (`test({phase}-{plan})`) exists for it. The `tdd_review_checkpoint` end-of-phase review escalates from advisory to blocking under the same condition. Documented contract: `references/execute-mvp-tdd.md`. Reserved escape hatch `--force-mvp-gate` is documented but not implemented.
+`METHOD.SPIDR-SPLITTING.def=five-axis story decomposition discipline (Spike/Paths/Interfaces/Data/Rules) used by /gsd-mvp-phase when a User Story is too large for one phase`
+`METHOD.SPIDR-SPLITTING.flow=full interactive flow per PRD #2826 Q3 (NOT a lightweight filter)`
+`METHOD.SPIDR-SPLITTING.reference=get-shit-done/references/spidr-splitting.md`
 
-### SPIDR Splitting
-Five-axis story decomposition discipline (**S**pike, **P**aths, **I**nterfaces, **D**ata, **R**ules) used by `/gsd-mvp-phase` when a User Story is too large for one phase. Full interactive flow per PRD #2826 Q3 (not a lightweight filter). Reference: `get-shit-done/references/spidr-splitting.md`.
+`DEFECT.TEST-SOURCE-GREP.symptom=test binds readFileSync result to a var then calls .includes/.match/.startsWith on it`
+`DEFECT.TEST-SOURCE-GREP.detect=scripts/lint-no-source-grep.cjs (npm run lint:tests) exits 1`
+`DEFECT.TEST-SOURCE-GREP.escape=add // allow-test-rule: <reason> anywhere in the file to exempt the whole file (only when reading product markdown or runtime output, NOT .cjs source)`
+`DEFECT.TEST-SOURCE-GREP.fix-forward=call the exported function, capture stdout/JSON, assert on typed fields`
 
----
+`DEFECT.TEST-REGEXP-INTERPOLATION.symptom=new RegExp with template literal interpolating a var that can contain regex metacharacters (e.g. phase id 5.1)`
+`DEFECT.TEST-REGEXP-INTERPOLATION.fix-forward=always escapeRegex on the interpolated value; utility lives in core.cjs and is already imported in most modules`
 
-## Recurring PR mistakes (distilled from CodeRabbit reviews, 2026-05-05)
+`DEFECT.TEST-DEAD-REGEX-IN-INCLUDES.symptom=src.includes('foo.*bar') — .* is regex metacharacter, not wildcard in .includes; always false`
+`DEFECT.TEST-DEAD-REGEX-IN-INCLUDES.fix-forward=use new RegExp('foo.*bar').test(src) or delete the dead branch`
 
-### Tests — no source-grep
-- **Rule**: never bind `readFileSync` result to a var then call `.includes()` / `.match()` / `.startsWith()` on it. CI runs `scripts/lint-no-source-grep.cjs` and exits 1.
-- **Escape**: add `// allow-test-rule: <reason>` anywhere in the file to exempt the whole file. Use when reading product markdown or runtime output (not `.cjs` source).
-- **Pattern to reach for instead**: call the exported function, capture stdout/JSON, assert on typed fields.
+`DEFECT.TEST-TOPLEVEL-READFILESYNC.symptom=module-level const src = fs.readFileSync(...) throws as unhandled exception before any test registers, aborting the runner with no named failure`
+`DEFECT.TEST-TOPLEVEL-READFILESYNC.fix-forward=move read inside test callback, OR wrap in try/catch + rethrow with helpful message`
 
-### Tests — no unescaped RegExp interpolation
-- `new RegExp(\`prefix${someVar}\`)` — if `someVar` can contain `.` or other metacharacters (e.g. phase id `5.1`), the pattern is wrong. Always `escapeRegex(someVar)`. The `escapeRegex` utility is in `core.cjs` and already imported in most modules.
+`DEFECT.SHELL-VAR-IN-SQ-JS-STRING.symptom=node -e "require('$HOOK_DIR/lib/foo.js')" breaks silently when $HOOK_DIR contains a single quote (POSIX-legal)`
+`DEFECT.SHELL-VAR-IN-SQ-JS-STRING.fix-forward=pass paths via env vars: GIT_CMD_LIB="$HOOK_DIR/lib/foo.js" node -e "require(process.env.GIT_CMD_LIB)"`
 
-### Tests — no dead regex branches in `.includes()`
-- `src.includes('foo.*bar')` is always false — `.*` is a regex metacharacter, not a wildcard in `includes`. Either use `new RegExp('foo.*bar').test(src)` or delete the branch.
+`DEFECT.SHELL-WORKTREE-DETECT-BAD-GUARD.symptom=[ -f .git ] does not detect worktrees from main repo; in main repo .git is a directory so guard is skipped`
+`DEFECT.SHELL-WORKTREE-DETECT-BAD-GUARD.fix-forward=use git rev-parse --git-dir and match *.git/worktrees/* in a case statement`
 
-### Tests — guard top-level `readFileSync` against ENOENT
-- Module-level `const src = fs.readFileSync(...)` throws before any `test()` registers, aborting the runner with an unhandled exception instead of a named failure. Wrap in try/catch and rethrow with a helpful message.
+`DEFECT.SHELL-PATH-CONTAINMENT-GLOB.symptom=[[ "$PATH" != "$ROOT"* ]] matches sibling prefixes (/repo-extra passes when ROOT=/repo)`
+`DEFECT.SHELL-PATH-CONTAINMENT-GLOB.fix-forward=[[ "$P" != "$ROOT" && "$P" != "$ROOT/"* ]]; also check [ -z "$ROOT" ] && exit 1 before the test; warn → fail-closed for security-relevant path checks`
 
-### Changesets — `pr:` field must be the PR number, not the issue number
-- The `pr:` key in `.changeset/*.md` frontmatter must reference the PR introducing the fix (e.g. `3142`), not the issue it closes (e.g. `3120`). Changelog tooling links to GitHub PRs by this value.
+`DEFECT.WORKSTREAM-MIGRATE-NAME-NO-NORMALIZE.invariant=every directory under .planning/workstreams/* must be addressable by workstream status/set/complete; creation and migration must share the same name contract`
+`DEFECT.WORKSTREAM-MIGRATE-NAME-NO-NORMALIZE.symptom=accepting raw --migrate-name values created directories that later commands reject (e.g. "Bad Name" directory exists but CLI rejects it as invalid)`
+`DEFECT.WORKSTREAM-MIGRATE-NAME-NO-NORMALIZE.fix-forward=normalize --migrate-name through same slug transform as workstream create ([a-z0-9-]); fail fast if normalization yields empty`
+`DEFECT.WORKSTREAM-MIGRATE-NAME-NO-NORMALIZE.regression-test=workstream create ... --migrate-name 'Bad Name' migrates to bad-name and does not leave 'Bad Name' on disk`
 
-### Shell hooks — never interpolate `$VAR` into single-quoted JS strings
-- `node -e "require('$HOOK_DIR/lib/foo.js')"` breaks silently if `$HOOK_DIR` contains a single quote (POSIX-legal). Pass paths via env vars: `GIT_CMD_LIB="$HOOK_DIR/lib/foo.js" node -e "require(process.env.GIT_CMD_LIB)"`.
+`DEFECT.DOCS-INTERNAL-COUNT-DRIFT.symptom=heading says (N shipped) and footnote says N-1 top-level references; CodeRabbit catches every time`
+`DEFECT.DOCS-INTERNAL-COUNT-DRIFT.fix-forward=update the footnote alongside the count`
 
-### Shell guards — `[ -f .git ]` does not detect worktrees from main repo
-- In the main repo `.git` is a directory, so `[ -f .git ]` is false and the entire guard is skipped. Use `git rev-parse --git-dir` and match `*.git/worktrees/*` in a `case` statement instead.
+`DEFECT.SKILL-CONSOLIDATION-MISSING-WORKFLOW.symptom=command absorbs micro-skill as a flag (e.g. capture --backlog); old command's process steps not ported to get-shit-done/workflows/<name>.md; commands/gsd/*.md execution_context @-references nothing`
+`DEFECT.SKILL-CONSOLIDATION-MISSING-WORKFLOW.detect=tests/bug-3135-capture-backlog-workflow.test.cjs — every execution_context @-reference in any commands/gsd/*.md must resolve to existing file on disk`
+`DEFECT.SKILL-CONSOLIDATION-MISSING-WORKFLOW.examples=PR #2824 missed reapply-patches.md and add-backlog.md; #3135 caught the latter`
+`DEFECT.SKILL-CONSOLIDATION-MISSING-WORKFLOW.fix-forward=run the regression test after every consolidation PR`
 
-### Shell guards — absolute-path containment must use `root/` prefix, not glob
-- `[[ "$PATH" != "$ROOT"* ]]` matches sibling prefixes (`/repo-extra` passes when `ROOT=/repo`). Use `[[ "$P" != "$ROOT" && "$P" != "$ROOT/"* ]]`. Also: check `[ -z "$ROOT" ]` and exit 1 before the containment test. Warn → fail-closed for security-relevant path checks.
+`OPS.CR-STALE-THREADS-AFTER-ALLOW-RULE.symptom=after adding // allow-test-rule: to silence lint, CodeRabbit's existing inline threads remain open even though the fix is in place`
+`OPS.CR-STALE-THREADS-AFTER-ALLOW-RULE.fix-forward=resolve via gh api graphql resolveReviewThread mutation before merging — open threads block clean merge history and mislead future reviewers`
+`OPS.CR-STALE-THREADS-AFTER-ALLOW-RULE.note=superseded for code-driven fixes by CR.AUTO-RESOLVE-ON-PUSH; this rule still applies for allow-test-rule annotation fixes that don't change test behavior`
 
-### Workstream migration names — enforce one canonical slug contract
-- **Invariant**: every directory under `.planning/workstreams/*` must be addressable by `workstream status/set/complete`, so creation and migration must share the same name contract.
-- **Failure class**: accepting raw `--migrate-name` values created directories that later commands reject (e.g. `Bad Name` directory exists but CLI rejects it as invalid).
-- **Rule**: normalize `--migrate-name` through the same slug transform as `workstream create` (`[a-z0-9-]`), and fail fast if normalization yields empty.
-- **TDD sentinel**: keep regression asserting `workstream create ... --migrate-name 'Bad Name'` migrates to `bad-name` and does not leave `Bad Name` on disk.
+`OPS.PR-DISCIPLINE-SPLIT-UNRELATED.rule=bug fix and docs rewrite committed to same branch produce a noisy diff and a PR that reviewers can't cleanly approve`
+`OPS.PR-DISCIPLINE-SPLIT-UNRELATED.fix-forward=cherry-pick doc changes to a dedicated docs/ branch immediately, then force-push the original branch to remove the commit; one concern per PR`
 
-### Docs — keep internal reference counts consistent
-- When a heading says `(N shipped)` and a footnote says `N-1 top-level references`, update the footnote. CodeRabbit catches this every time.
+`DEFECT.INVENTORY-MD-NOT-UPDATED.symptom=docs/INVENTORY.md tracks shipped workflow count (## Workflows (N shipped)) and one row per file; adding/removing a workflow without updating it produces internally inconsistent doc`
+`DEFECT.INVENTORY-MD-NOT-UPDATED.companion=docs/INVENTORY-MANIFEST.json must stay in sync with filesystem`
+`DEFECT.INVENTORY-MD-NOT-UPDATED.attribution-rule=when a flag absorbs a micro-skill, old skill's "Invoked by" attribution must move to the new parent (e.g. add-todo.md incorrectly claimed /gsd-capture --backlog until #3135 corrected)`
 
----
+`OPS.README-STORYLINE-ONLY.rule=root README.md ≤300 lines: hero, author note, 6-step loop, install, core command table, why-it-works bullets, config key dials, docs index, minimal troubleshooting`
+`OPS.README-STORYLINE-ONLY.linkability=every removed detail section needs a link to canonical doc that covers it; all doc links must resolve before commit`
+`OPS.README-STORYLINE-ONLY.markdownlint=MD001 (heading level skip — don't use ### inside admonitions; use bold instead), MD040 (fenced code blocks must declare language)`
 
-## Workflow learnings (distilled from triage + PR cycle, 2026-05-05)
+`OPS.ISSUE-TRIAGE-CHECK-EXISTING-WORK.rule=before writing agent brief for confirmed bug, check (1) local branches git branch -a | grep <issue>, (2) untracked/modified files on that branch, (3) stash, (4) open PRs with matching head branch`
+`OPS.ISSUE-TRIAGE-CHECK-EXISTING-WORK.why=a crash may have left work 90% done — recover and commit rather than re-implementing`
 
-### Skill consolidation gap class — missing workflow files
-- When a command absorbs a micro-skill as a flag (e.g. `capture --backlog`), the old command's process steps must be ported to a `get-shit-done/workflows/<name>.md` file. The routing wrapper in `commands/gsd/*.md` declares an `execution_context` `@`-reference to that workflow — if the file doesn't exist the agent loads nothing and has no steps to follow.
-- **Detection**: `tests/bug-3135-capture-backlog-workflow.test.cjs` adds a broad regression — every `execution_context` `@`-reference in any `commands/gsd/*.md` must resolve to an existing file on disk. This test will catch all future gaps of this class immediately.
-- **Prior art**: `reapply-patches.md` was the first gap found and fixed in PR #2824 itself. `add-backlog.md` was missed in the same PR and caught later in #3135. Run the regression test after every consolidation PR.
+`DEFECT.SDK-ONLY-VERB-NO-EXEMPTION.symptom=gsd-sdk query verb implemented only in SDK native registry (no gsd-tools.cjs mirror) without entry in NO_CJS_SUBPROCESS_REASON in sdk/src/golden/golden-policy.ts`
+`DEFECT.SDK-ONLY-VERB-NO-EXEMPTION.detect=golden-policy test fails, treats verb as missing implementation rather than intentional SDK-only path`
+`DEFECT.SDK-ONLY-VERB-NO-EXEMPTION.fix-forward=add the verb to NO_CJS_SUBPROCESS_REASON with one-line rationale`
 
-### CodeRabbit thread resolution — stale threads after allow-test-rule fixes
-- After adding `// allow-test-rule:` to silence lint, CodeRabbit's existing inline threads remain open even though the acknowledged fix is in place. Resolve them via `resolveReviewThread` GraphQL mutation before merging — open threads block clean merge history and mislead future reviewers.
-- Pattern: `gh api graphql -f query='mutation { resolveReviewThread(input:{threadId:"PRRT_..."}) { thread { isResolved } } }'`
+`DEFECT.WORKFLOW-ALLOWED-TOOLS-MISSING-WRITE.symptom=command delegates to workflow via execution_context; command's allowed-tools doesn't cover every tool the workflow calls (including Write for file creation)`
+`DEFECT.WORKFLOW-ALLOWED-TOOLS-MISSING-WRITE.failure-mode=thin wrapper pattern makes this easy to miss — process steps live in workflow, tool grant lives in command frontmatter; missing tool silently fails at runtime`
+`DEFECT.WORKFLOW-ALLOWED-TOOLS-MISSING-WRITE.fix-forward=audit allowed-tools against every tool the linked workflow uses`
 
-### PR discipline — split unrelated changes into separate PRs
-- A bug fix and a docs rewrite committed to the same branch produce a noisy diff and a PR that reviewers can't cleanly approve. Cherry-pick doc changes to a dedicated branch (`docs/`) immediately, then force-push the original branch to remove the commit. One concern per PR.
+`DEFECT.WORKFLOW-USER-PATH-NO-SANITIZE.symptom=workflow step takes user input (subcommand argument, $ARGUMENTS, parsed remainder) and constructs .planning/…/{SLUG}.md path without sanitization`
+`DEFECT.WORKFLOW-USER-PATH-NO-SANITIZE.fix-forward=strip non-[a-z0-9-] chars, reject ../\\, enforce max length; document sanitization inline at the step, not just in <security_notes>; "(already sanitized)" notes must trace back to explicit sanitization guard`
 
-### INVENTORY.md must be updated alongside every workflow file addition/removal
-- `docs/INVENTORY.md` tracks the shipped workflow count (`## Workflows (N shipped)`) and has one row per file. Adding or removing a workflow without updating INVENTORY produces an internally inconsistent doc.
-- Also update `docs/INVENTORY-MANIFEST.json` — it is the machine-readable manifest and must stay in sync with the filesystem.
-- When a flag absorbs a micro-skill, the old skill's `Invoked by` attribution in INVENTORY must move to the new parent (e.g. `add-todo.md` incorrectly claimed `/gsd-capture --backlog` until #3135 corrected it).
+`DEFECT.WORKFLOW-RESUME-MODE-BYPASSES-GUARDS.symptom=CLOSE/STATUS modes that document "(already sanitized)" do not automatically cover RESUME or default modes`
+`DEFECT.WORKFLOW-RESUME-MODE-BYPASSES-GUARDS.fix-forward=each mode that constructs file path from user input needs its own guard; do not assume sibling modes share state`
 
-### README — keep root README as storyline only; all detail lives in docs/
-- Root `README.md` should be ≤300 lines: hero, author note, 6-step loop, install, core command table, why-it-works bullets, config key dials, docs index, minimal troubleshooting.
-- Every removed detail section needs a link to the canonical doc that covers it. All doc links must resolve before committing.
-- Markdownlint rules to watch: MD001 (heading level skip — don't use `###` directly inside admonitions; use bold instead), MD040 (fenced code blocks must declare a language identifier).
+`DEFECT.LINT-TEST-DUPLICATED-CONSTANT.symptom=lint script and test suite both implement same constant (CANONICAL_TOOLS) or parser (parseFrontmatter, executionContextRefs); silent divergence`
+`DEFECT.LINT-TEST-DUPLICATED-CONSTANT.failure-mode=tool added to lint allowlist but not test (or vice versa) causes one layer to pass while the other fails`
+`DEFECT.LINT-TEST-DUPLICATED-CONSTANT.fix-forward=extract to scripts/*-helpers.cjs module required by both`
 
-### Issue triage — always check for existing work before filing as new
-- Before writing an agent brief for a confirmed bug, check: (1) local branches (`git branch -a | grep <issue>`), (2) untracked/modified files on that branch, (3) stash, (4) open PRs with matching head branch. A crash may have left work 90% done — recover and commit rather than re-implementing.
+`DEFECT.GLOBAL-REGEX-LASTINDEX-STATE.symptom=const RE = /pattern/g shared across functions retains lastIndex after .test or .exec call`
+`DEFECT.GLOBAL-REGEX-LASTINDEX-STATE.fix-forward=use non-global pattern for boolean checks (/pattern/.test(s)); create new RegExp(pattern, 'g') per iteration when you need exec loops; forgetting lastIndex = 0 resets causes intermittent false negatives`
 
-### SDK-only verbs — golden-policy exemption required
-- Any `gsd-sdk query` verb implemented only in the SDK native registry (no `gsd-tools.cjs` mirror) must be added to `NO_CJS_SUBPROCESS_REASON` in `sdk/src/golden/golden-policy.ts`. Without this entry the golden-policy test fails, treating the verb as a missing implementation rather than an intentional SDK-only path.
+`DEFECT.ADR-NO-STATUS-DATE-HEADER.symptom=docs/adr/NNNN-*.md missing - **Status:** Accepted/Proposed/Deprecated and - **Date:** YYYY-MM-DD immediately after title`
+`DEFECT.ADR-NO-STATUS-DATE-HEADER.consequence=ADR is undatable and untriageable when the list grows`
 
----
+`DEFECT.WORKFLOW-XML-STEP-UNDERSCORE.rule=all workflow file names use hyphens; <step name="..."> attributes inside those files must match: extract-learnings not extract_learnings`
+`DEFECT.WORKFLOW-XML-STEP-UNDERSCORE.detect=tests asserting content.includes('<step name=') should tighten to exact hyphenated name so renames are caught`
 
-## Recurring findings from ADR-0002 PR review (2026-05-05)
+`DEFECT.INVENTORY-MANIFEST-WRONG-KEY.symptom=docs/INVENTORY-MANIFEST.json has families.workflows (canonical, read by tooling) and a stale top-level workflows key`
+`DEFECT.INVENTORY-MANIFEST-WRONG-KEY.cause=node update script wrote to wrong key`
+`DEFECT.INVENTORY-MANIFEST-WRONG-KEY.fix-forward=always update families.workflows; delete any top-level workflows key if it appears`
 
-### allowed-tools must include every tool the workflow uses
-When a command delegates to a workflow via `execution_context`, the command's `allowed-tools` must cover every tool the workflow calls — including `Write` for file creation. The thin wrapper pattern makes this easy to miss: the process steps live in the workflow, but the tool grant lives in the command frontmatter. Missing a tool silently fails at runtime.
+`OPS.WORKFLOW-PROSE-FRAGMENTS.rule=after stripping prose @-refs, some command <process> blocks retained bolded **Follow the X workflow** fragments`
+`OPS.WORKFLOW-PROSE-FRAGMENTS.standard=ADR-0002 standard is "Execute end-to-end." for single-workflow commands; routing commands with flag dispatch use "execute the X workflow end-to-end." in routing bullets (no bold, no redundant path)`
 
-### User-supplied slug/path args always need sanitization before file path construction
-Any workflow step that takes user input (subcommand argument, `$ARGUMENTS`, or parsed remainder) and constructs a `.planning/…/{SLUG}.md` path must sanitize first: strip non-`[a-z0-9-]` chars, reject `..`/`/`/`\`, enforce max length. Document the sanitization inline at the step, not just in `<security_notes>`. Steps that say "(already sanitized)" must trace back to an explicit sanitization guard — not just a preceding describe block.
+`DEFECT.CR-TEST-DIAGNOSTIC-OPACITY.symptom=behavior correct but CR requests clearer failure surfaces before .map on parsed output`
+`DEFECT.CR-TEST-DIAGNOSTIC-OPACITY.rule=after JSON.parse, assert output object shape (e.g. Array.isArray(output.phases)) with raw-output-prefix diagnostics`
+`DEFECT.CR-TEST-DIAGNOSTIC-OPACITY.benefit=prevents opaque TypeError failures and shortens triage loops when CLI output shape changes`
 
-### RESUME/fallback modes bypass sanitization guards written for primary modes
-CLOSE and STATUS modes that document "(already sanitized)" do not automatically cover RESUME or default modes. Each mode that constructs a file path from user input needs its own guard — don't assume sibling modes share state.
+`OPS.MERGE-GATE-DISCIPLINE.rule=CI/checks can be green while unresolved review threads still block clean merge policy`
+`OPS.MERGE-GATE-DISCIPLINE.three-gates=required checks green AND CodeRabbit pass AND unresolved thread count = 0`
+`OPS.MERGE-GATE-DISCIPLINE.authoritative-source=GraphQL reviewThreads, not summary comments / check badge alone`
 
-### Shared helpers prevent lint/test disagreement
-When a lint script and a test suite both implement the same constant (`CANONICAL_TOOLS`) or parser (`parseFrontmatter`, `executionContextRefs`), they will silently diverge. Extract to a `scripts/*-helpers.cjs` module required by both. A tool added to the lint's allowlist but not the test's (or vice versa) causes one layer to pass while the other fails.
+`MODULE.SDK-RUNTIME-BRIDGE.purpose=one SDK Runtime Bridge seam (sdk/src/query-runtime-bridge.ts) for dispatch routing and observability`
+`MODULE.SDK-RUNTIME-BRIDGE.event-typing=canonical union RuntimeBridgeEvent (replaced orphan event typing)`
+`MODULE.SDK-RUNTIME-BRIDGE.observability=onDispatchEvent runs behind safe emitter so callback failures cannot alter dispatch outcomes`
+`MODULE.SDK-RUNTIME-BRIDGE.strict-mode=strict native-adapter rejection reports dispatchMode: 'native' (no fake subprocess attempt)`
+`MODULE.SDK-RUNTIME-BRIDGE.policy-defaults=allowFallbackToSubprocess passed through as undefined when unset (no forced override in GSDTools)`
+`MODULE.SDK-RUNTIME-BRIDGE.transport-decision-order=fallback-disabled guard throws BEFORE emitting subprocess decision events`
+`MODULE.SDK-RUNTIME-BRIDGE.invariant=explicit invariant in subprocessReason for impossible states (fail loud on contract drift)`
+`MODULE.SDK-RUNTIME-BRIDGE.docs-touched=README.md, docs/CLI-TOOLS.md, docs/ARCHITECTURE.md, ADR narrative consistency`
 
-### readFileSync outside test() crashes the runner before any test registers
-Module-level or suite-registration-time `readFileSync` throws as an unhandled exception if the file is absent, aborting the runner with no test output. Move reads inside `test()` callbacks so failures surface as named test failures.
-
-### Global regex with `g` flag carries `lastIndex` state between calls
-A `const RE = /pattern/g` shared across functions retains `lastIndex` after `.test()` or `.exec()`. Use a non-global pattern for boolean checks (`/pattern/.test(s)`) and create a new `RegExp(pattern, 'g')` per iteration when you need `exec()` loops. Forgetting `lastIndex = 0` resets causes intermittent false negatives.
-
-### ADR files need Status + Date headers
-Every `docs/adr/NNNN-*.md` file must open with `- **Status:** Accepted` (or Proposed/Deprecated) and `- **Date:** YYYY-MM-DD` immediately after the title. Without them the ADR is undatable and untriageable when the list grows.
-
-### Step names in workflow XML must use hyphens, not underscores
-All workflow file names use hyphens; `<step name="...">` attributes inside those files must match: `extract-learnings` not `extract_learnings`. Tests asserting `content.includes('<step name=')` should tighten to the exact hyphenated name so renames are caught.
-
-### INVENTORY-MANIFEST.json has two workflow lists — only families.workflows is canonical
-`docs/INVENTORY-MANIFEST.json` has `families.workflows` (canonical, read by tooling) and a stale top-level `workflows` key (introduced by a node update script that wrote to the wrong key). Always update `families.workflows`. Delete any top-level `workflows` key if it appears.
-
-### "Follow the X workflow" prose fragments are non-standard — use "Execute end-to-end."
-After stripping prose @-refs, some command `<process>` blocks retained bolded "**Follow the X workflow**" fragments. ADR-0002 standard is `Execute end-to-end.` for single-workflow commands. Routing commands with flag dispatch use `execute the X workflow end-to-end.` in routing bullets (no bold, no redundant path).
-
----
-
-## Recurring CodeRabbit review patterns (2026-05-05, PRs #3152/#3154/#3155)
-
-### Changeset metadata drift (`pr:` points at issue instead of PR)
-- In `.changeset/*.md`, reviewers repeatedly flag `pr:` values that accidentally reference issue ids.
-- **Rule**: `pr:` must equal the GitHub PR number carrying the change.
-- **Pre-flight check**: before push, verify each new changeset file against current branch PR number.
-
-### Test diagnostics quality for command-output parsing
-- Even when behavior is correct, CR requests clearer failure surfaces before `.map()` on parsed output.
-- **Rule**: after `JSON.parse`, assert output object shape (e.g., `Array.isArray(output.phases)`) with raw-output-prefix diagnostics.
-- This prevents opaque `TypeError` failures and shortens triage loops when CLI output shape changes.
-
-### Merge gate discipline: CodeRabbit pass is necessary but not sufficient
-- CI/checks can be green while unresolved review threads still block clean merge policy.
-- **Rule**: always gate on all three together: required checks green, CodeRabbit pass, unresolved thread count = 0.
-- Keep using GraphQL `reviewThreads` as authoritative unresolved state, not summary comments/check badge alone.
-
----
-
-## SDK Runtime Bridge review synthesis (PR #3158, 2026-05-05)
-
-### What we fixed
-- Deepened one **SDK Runtime Bridge Module** seam (`sdk/src/query-runtime-bridge.ts`) for dispatch routing and observability.
-- Replaced orphan event typing with a canonical union (`RuntimeBridgeEvent`).
-- Made bridge observability non-intrusive: `onDispatchEvent` now runs behind a safe emitter so callback failures cannot alter dispatch outcomes.
-- Corrected strict-mode event semantics: strict native-adapter rejection now reports `dispatchMode: 'native'` (no fake subprocess attempt).
-- Preserved execution policy defaults by passing `allowFallbackToSubprocess` through as `undefined` when unset (no forced override in `GSDTools`).
-- Fixed transport decision ordering: fallback-disabled guard now throws before emitting subprocess decision events.
-- Added explicit invariant in `subprocessReason` for impossible states (fail loud on contract drift).
-- Updated user-facing docs (`README.md`, `docs/CLI-TOOLS.md`, `docs/ARCHITECTURE.md`) and ADR narrative consistency.
-
-### What we should not do again
-- Do not let observability callbacks sit on the critical path without isolation.
-- Do not emit structured events that claim a transport mode that never happened.
-- Do not force option defaults at call sites when policy Modules already define defaults.
-- Do not keep duplicate/inert exported types; expose one canonical union Interface.
-- Do not emit decision events before guard checks that may reject the path.
-- Do not leave architectural docs with ambiguous seam ownership between CLI and SDK paths.
-
----
-
-## AI Ops Memory (2026-05-09, machine-oriented)
+`LESSON.SDK-BRIDGE.dont-1=do not let observability callbacks sit on critical path without isolation`
+`LESSON.SDK-BRIDGE.dont-2=do not emit structured events that claim a transport mode that never happened`
+`LESSON.SDK-BRIDGE.dont-3=do not force option defaults at call sites when policy modules already define defaults`
+`LESSON.SDK-BRIDGE.dont-4=do not keep duplicate/inert exported types; expose one canonical union Interface`
+`LESSON.SDK-BRIDGE.dont-5=do not emit decision events before guard checks that may reject the path`
+`LESSON.SDK-BRIDGE.dont-6=do not leave architectural docs with ambiguous seam ownership between CLI and SDK paths`
 
 `RULESET.CONTRIB.GATE.ORDER=issue-first -> approval-label -> code -> PR-link -> changeset/no-changelog`
 `RULESET.CONTRIB.CLASSIFY.fix=requires confirmed/confirmed-bug before implementation`
 `RULESET.CONTRIB.CLASSIFY.enhancement=requires approved-enhancement before implementation`
 `RULESET.CONTRIB.CLASSIFY.feature=requires approved-feature before implementation`
-
-## AI Ops Memory (2026-05-10, machine-oriented)
 
 `RULESET.GH.AUTH.DEFAULT=source .envrc GITHUB_TOKEN before gh; exception=ambient allowed only when user explicitly says machine-only fallback`
 `RULESET.CODERABBIT.GUARD.OPEN_PRS=gh pr list --repo gsd-build/get-shit-done --author @me --state open; repeat near end because open PR set can change mid-run`
@@ -288,16 +252,15 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `WORKTREE.SEAM.caller-rule=verify.cjs must consume inspectWorktreeHealth for W017 classification; no ad-hoc porcelain parsing in callers`
 `WORKTREE.SEAM.test-anchor-w017=tests/orphan-worktree-detection.test.cjs + tests/worktree-safety-policy.test.cjs`
 `WORKTREE.SEAM.inventory-snapshot=snapshotWorktreeInventory(repoRoot,{staleAfterMs,nowMs}) is canonical linked-worktree health snapshot for callers`
+
 `PLANNING.PATH.PARITY.sdk-project-scope=.planning/<project> (never .planning/projects/<project>); mirror planning-workspace.cjs planningDir()`
 `PLANNING.PATH.SEAM.sdk=helpers.planningPaths delegates to workspacePlanningPaths + resolveWorkspaceContext; precedence explicit-ws > env-ws > env-project > root`
 `PLANNING.PATH.SEAM.init-handlers=[initExecutePhase, initPlanPhase, initPhaseOp, initMilestoneOp] consume helpers.planningPaths().planning (no direct relPlanningPath join)`
+
 `WORKSTREAM.NAME.POLICY.cjs-module=get-shit-done/bin/lib/workstream-name-policy.cjs owns toWorkstreamSlug + active-name/path-segment validation`
 `WORKSTREAM.POINTER.SEAM.sdk-module=sdk/src/query/active-workstream-store.ts owns read/write self-heal for .planning/active-workstream`
+
 `CONFIG.SEAM.loadConfig-context=loadConfig(cwd,{workstream}) replaces env-mutation fallback; no temporary process.env GSD_WORKSTREAM rewrites`
-
----
-
-## Release Notes Standard (2026-05-09, machine-oriented)
 
 `RELEASE-NOTES.SCOPE=GitHub Releases body for tags vX.Y.Z, vX.Y.Z-rcN; not CHANGELOG.md (changeset workflow owns that)`
 `RELEASE-NOTES.DEFAULT-STATE=auto-generated body is "What's Changed" PR list + Full Changelog link; treat as draft, not final`
@@ -339,10 +302,6 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `RELEASE-NOTES.RELEASE-STREAM.dev-branch=canary dist-tag (only); install via @canary`
 `RELEASE-NOTES.RELEASE-STREAM.main-branch=next (RCs) + latest (stable); install via @next or @latest`
 `RELEASE-NOTES.RELEASE-STREAM.rule=streams do not mix; do not document @canary install in RC notes or @next in canary notes`
-
----
-
-## Repo-Rule Reinforcement (2026-05-09, machine-oriented)
 
 `META.RULE.canonical-source-precedence=CONTRIBUTING.md > docs/adr/* > CONTEXT.md > agent memory`
 `META.RULE.read-contributing-first=read CONTRIBUTING.md sections "Pull Request Guidelines" + "CHANGELOG Entries" before EVERY agent dispatch`
@@ -439,8 +398,6 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `PROC.MERGE-WAVE.merge-tool=gh pr merge <n> --squash --delete-branch`
 `PROC.MERGE-WAVE.merge-tool-warning=delete-branch may fail with "used by worktree at" — harmless; remote branch still deleted`
 
-## Triage+Merge Wave Outcome (2026-05-09T15:47Z, machine-oriented)
-
 `WAVE.2026-05-09.scope=trek-e-authored issues, classes=[bug, enhancement, feature]`
 `WAVE.2026-05-09.dispatched=8`
 `WAVE.2026-05-09.merged=7`
@@ -507,10 +464,6 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `WAVE.LESSON.agent-narrative-unreliable=k095/k324 confirmed at scale: 5 of 8 agents terminated mid-monitor with stale claims requiring direct verification`
 `WAVE.LESSON.k101-still-trips=even after CONTEXT.md k101 reinforcement, agent of record posted self-PR comment on close; k331 adds explicit close-time literal-instruction guard`
 
----
-
-## Recent Defect Anti-Patterns (2026-05-09, machine-oriented)
-
 `DEFECT.SCOPE.window=PRs #3306..#3325 + sibling fixes #3240/#3242/#3245/#3257/#3261/#3267/#3286/#3287`
 `DEFECT.FORMAT=class.sub-key=value | classes are greppable; each class carries detect / fix / anchor sub-keys when applicable`
 
@@ -567,7 +520,7 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `DEFECT.AGENT-FILE-SIZE-CAP-BREACH.fix-forward=mirror MVP mode pattern — extract full rules to get-shit-done/references/planner-<mode>.md, leave a slim Detection section in the agent file with @-reference to the new file`
 
 `DEFECT.CHANGESET-PR-FIELD-DRIFT.symptom=.changeset/*.md frontmatter pr: value is the issue number, a guess made before PR opened, or a stale stacked-PR number`
-`DEFECT.CHANGESET-PR-FIELD-DRIFT.examples=#3316 (pr:3312 was the issue), #3325 (pr:3319 was a guess); already covered in CONTEXT.md L94 + L186 but recurs every cycle`
+`DEFECT.CHANGESET-PR-FIELD-DRIFT.examples=#3316 (pr:3312 was the issue), #3325 (pr:3319 was a guess); already covered earlier in this file but recurs every cycle`
 `DEFECT.CHANGESET-PR-FIELD-DRIFT.detect=changeset pr: value mismatches the actual PR number returned by gh api POST /pulls`
 `DEFECT.CHANGESET-PR-FIELD-DRIFT.fix-forward=author changeset with placeholder pr:0; immediately after gh api POST /pulls returns the number, edit changeset and amend or follow-up commit; never guess`
 
@@ -596,17 +549,17 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `DEFECT.HALT-COST-PATTERN.detect=any subagent-spawning workflow with mid-flight pause-and-resume that does not preserve subagent context`
 `DEFECT.HALT-COST-PATTERN.fix-forward=offer config flag for end-of-phase aggregation; if cost dominates make end-of-phase the default; route deferred items through existing verifier surface, do not invent new writer`
 
-`DEFECT.HOOK-OVER-ENFORCEMENT.symptom=PreToolUse hook keeps blocking gh pr edit / gh issue edit even after all required files are read in the session`
-`DEFECT.HOOK-OVER-ENFORCEMENT.examples=this session repeatedly hit "Refusing to run gh issue create|edit / gh pr create|edit" despite reading every listed file`
-`DEFECT.HOOK-OVER-ENFORCEMENT.detect=hook re-fires on each invocation regardless of session-state read receipts`
-`DEFECT.HOOK-OVER-ENFORCEMENT.fix-forward=use gh api -X PATCH repos/{owner}/{repo}/pulls/{N} or repos/{owner}/{repo}/issues/{N} directly — same effect, hook regex does not match`
+`DEFECT.HOOK-OVER-ENFORCEMENT.symptom=PreToolUse hook keeps blocking gh pr edit / gh issue edit even after all required files are read in the session; security_reminder_hook over-fires on docstrings that mention exec semantics; etc`
+`DEFECT.HOOK-OVER-ENFORCEMENT.examples=this session repeatedly hit "Refusing to run gh issue create|edit / gh pr create|edit" despite reading every listed file; CONTEXT.md Write blocked because content contained literal '.exec' followed by parens in documentation strings`
+`DEFECT.HOOK-OVER-ENFORCEMENT.detect=hook re-fires on each invocation regardless of session-state read receipts; or fires on documentation matching code-pattern regex without context awareness`
+`DEFECT.HOOK-OVER-ENFORCEMENT.fix-forward=use gh api -X PATCH repos/{owner}/{repo}/pulls/{N} or repos/{owner}/{repo}/issues/{N} directly — same effect, hook regex does not match; for security-hook overfiring on docs, rephrase the offending substring (e.g. write '.exec call' instead of '.exec' followed by parens) without losing semantic content`
 
 `DEFECT.DEFAULT-FLIP-DOCUMENTATION.symptom=PR flips a config default but does not call out the migration semantics (when does the new default take effect; existing configs vs new configs; what the opt-back-in looks like)`
 `DEFECT.DEFAULT-FLIP-DOCUMENTATION.examples=#3309 v2 default flip from mid-flight to end-of-phase`
 `DEFECT.DEFAULT-FLIP-DOCUMENTATION.detect=any PR that changes a default value in CONFIG_DEFAULTS or buildNewProjectConfig; check that PR body Breaking Changes section explicitly covers (a) when the new default takes effect, (b) opt-back-in command, (c) effect on in-flight artifacts`
 `DEFECT.DEFAULT-FLIP-DOCUMENTATION.fix-forward=template — "new default takes effect when .planning/config.json is rewritten (config-set, fresh project, regenerated config); existing artifacts continue to work; opt-back-in: gsd config-set <key> <old-value>"`
 
-`DEFECT.SOURCE-GREP-IN-NEW-TESTS.symptom=new test file uses readFileSync + .includes() / .match() against source code (CONTEXT.md L82); contradicts the test rule lint script`
+`DEFECT.SOURCE-GREP-IN-NEW-TESTS.symptom=new test file uses readFileSync + .includes / .match against source code; contradicts the test rule lint script`
 `DEFECT.SOURCE-GREP-IN-NEW-TESTS.detect=tests/lint-no-source-grep.cjs (npm run lint:tests) fails with line-number-precise violation; or test reads sdk/dist/* artifacts in CI where dist may not exist`
 `DEFECT.SOURCE-GREP-IN-NEW-TESTS.fix-forward=replace with runGsdTools(...) behavioral test capturing JSON; if asserting agent .md content (which IS the runtime contract) add // allow-test-rule: source-text-is-the-product with one-line justification`
 
@@ -614,16 +567,16 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `DEFECT.GENERATIVE-FIX=for any new constant/array/parser shared between CJS and SDK (or between two workflow surfaces), the same commit MUST add a parity assertion that fails when the two diverge`
 `DEFECT.GENERATIVE-EXEMPLAR=tests/config-schema-sdk-parity.test.cjs (asserts SDK VALID_CONFIG_KEYS == CJS VALID_CONFIG_KEYS); tests/bug-3298-phase-dir-prefix-drift-in-workflows.test.cjs (asserts every workflow surface uses expected_phase_dir)`
 
-`CR.MD040-NEW-MD.symptom=newly-added fenced code block in a hand-edited .md file (Edit/Write tool, not platformWriteSync) opens with bare ``` instead of ```text/```bash/```js/etc; CodeRabbit flags MD040 as 🟡 Quick win`
+`CR.MD040-NEW-MD.symptom=newly-added fenced code block in a hand-edited .md file (Edit/Write tool, not platformWriteSync) opens with bare backticks instead of language-tagged backticks; CodeRabbit flags MD040 as Quick win`
 `CR.MD040-NEW-MD.examples=#3487 — three new fences (docs/adr/README.md L11, docs/contributor-standards.md L94, docs/prd/README.md L11) all flagged in same review pass`
-`CR.MD040-NEW-MD.detect=before push — grep -nE "^\`\`\`$" against your touched files; opening fences (the ones followed by content) need a language token, closing fences stay bare`
-`CR.MD040-NEW-MD.fix-forward=add language to opening fence — `text` for filenames/paths/placeholders, `bash` for shell, `js`/`cjs`/`ts` for code, `json`/`yaml` for config, `diff` for diffs, `md` for markdown samples`
+`CR.MD040-NEW-MD.detect=before push — grep for bare opening backtick fences against your touched files; opening fences (the ones followed by content) need a language token, closing fences stay bare`
+`CR.MD040-NEW-MD.fix-forward=add language to opening fence — text for filenames/paths/placeholders, bash for shell, js/cjs/ts for code, json/yaml for config, diff for diffs, md for markdown samples`
 `CR.MD040-NEW-MD.root-cause=platformWriteSync._normalizeMd auto-fixes MD022/MD031/MD032/MD012/MD047 for .md writes via the seam, but does NOT inject fence language tokens; Edit/Write tool calls bypass even that normalizer entirely`
 
 `CR.HEADING-ANCHOR-DRIFT.symptom=cross-references like ../../CONTRIBUTING.md#proposing-an-adr-or-prd resolve to nothing because the heading text was renamed/abbreviated and its GitHub-rendered slug no longer matches`
 `CR.HEADING-ANCHOR-DRIFT.examples=#3487 — heading "### 📐 ADR or PRD" produced GitHub slug #adr-or-prd; cross-refs from docs/adr/README.md, docs/prd/README.md, docs/contributor-standards.md all targeted #proposing-an-adr-or-prd; all 3 silently broken until CR caught it`
 `CR.HEADING-ANCHOR-DRIFT.detect=GitHub slug rules — lowercase, strip emojis, strip punctuation, spaces→hyphens; before push, compute slug for any new heading and grep -rn "#<slug>" repo-wide to verify cross-refs match`
-`CR.HEADING-ANCHOR-DRIFT.fix-forward=usually rename the heading so its slug matches existing cross-refs (1 change vs N referrer updates); CR catches as 🟡 Quick win but pre-push grep avoids the round-trip`
+`CR.HEADING-ANCHOR-DRIFT.fix-forward=usually rename the heading so its slug matches existing cross-refs (1 change vs N referrer updates); CR catches as Quick win but pre-push grep avoids the round-trip`
 
 `CR.AUTO-RESOLVE-ON-PUSH.behavior=CodeRabbit re-reviews on each new commit; threads where the flagged issue is addressed auto-flip to isResolved=true + isOutdated=true within ~30-90s; new "actionable comments: 0 🎉" summary comment posts when clean`
 `CR.AUTO-RESOLVE-ON-PUSH.implication=do NOT manually resolveReviewThread via GraphQL after pushing fixes — wasted GraphQL call, and races CR's own re-resolution; verify outcome with gh api graphql query reviewThreads { isResolved isOutdated } after the next CR cycle`
@@ -639,65 +592,36 @@ After stripping prose @-refs, some command `<process>` blocks retained bolded "*
 `DEFECT.NO-CHANGELOG-MISAPPLIED.fix-forward=remove no-changelog label; npm run changeset -- --type Changed --pr <N> --body "<one-sentence contributor-facing summary>"; commit fragment as separate commit on the same branch; verify PR labels show no-changelog gone before merge`
 
 `CR.GENERATIVE-PRIORITY=hand-edited markdown additions and "doc-only" PRs share a root: they bypass the seam-level normalizer (platformWriteSync._normalizeMd) and the typed-template gate (CONTRIBUTING.md fix/enhancement/feature path), so failures only surface at CR/bot review time`
-`CR.GENERATIVE-FIX=before opening any docs PR, run a 3-step pre-flight — (1) grep your touched files for ^\`\`\`$ and add language tags to opening fences, (2) compute the GitHub slug for any new headings (lowercase, strip emojis/punctuation, spaces→hyphens) and grep the repo for cross-refs to that slug, (3) decide if the change is contributor-facing → if yes, use enhancement template + Changed changeset + approved-enhancement label on issue, do NOT use the default-template doc-only carve-out`
+`CR.GENERATIVE-FIX=before opening any docs PR, run a 3-step pre-flight — (1) grep your touched files for bare opening backtick fences and add language tags, (2) compute the GitHub slug for any new headings (lowercase, strip emojis/punctuation, spaces→hyphens) and grep the repo for cross-refs to that slug, (3) decide if the change is contributor-facing → if yes, use enhancement template + Changed changeset + approved-enhancement label on issue, do NOT use the default-template doc-only carve-out`
 `CR.GENERATIVE-EXEMPLAR=#3487 hit all 5 of the above issues in the same PR; one push round-trip per fix; total ~20min wasted that pre-flight would have caught`
 
-### Shell Command Projection Module
-Module owning all OS-facing I/O for the tool: runtime-aware command-text rendering (hook commands, PATH action lines, shim scripts), subprocess dispatch (`execGit`, `execNpm`, `execTool`, `probeTty`), and platform file I/O (`platformWriteSync`, `platformReadSync`, `platformEnsureDir`). Single seam for platform-conditional logic — one place to fix any shell or file write regression across Windows, macOS, and Linux. Lives in `get-shit-done/bin/lib/shell-command-projection.cjs`. See ADR-0009.
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.scope=shell-command-projection.cjs extended to own subprocess dispatch + platform file I/O across issues #3465–#3468`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.adr-effect=ADR-0009 "does not execute" constraint superseded; ADR-0010 File Operation Engine superseded`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.new-exports=[execGit, execNpm, execTool, probeTty, normalizeContent, platformWriteSync, platformReadSync, platformEnsureDir]`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.result-shape-invariant=all exec* return {exitCode, stdout, stderr}; never throw on non-zero exit`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.platform-policy=shell: process.platform === 'win32' lives only in execNpm; probeTty returns null on Windows`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.normalization-policy=platformWriteSync owns full normalizeMd for .md; CRLF→LF + trailing newline for all others; callers must NOT pre-call normalizeMd`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.typed-surface=normalizeContent(filePath, content) is the pure typed surface tests assert on — no file content read-back in tests`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.no-circular-dep=_normalizeMd re-implemented inline (not imported from core.cjs) to avoid circular dep`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.compat-removal=atomicWriteFileSync, safeReadFile, normalizeMd remained in core.cjs exports until Phase 4 (#3468) removed them`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.phase-gate=no call site migration until Phase 1 branch merged; Phase 2 (#3466)=6 subprocess files; Phase 3 (#3467)=15 fs files (215 sites); Phase 4 (#3468)=remove compat exports`
+`SESSION.2026-05-13.SHELL-PROJECTION-EXPANSION.test-anchor=tests/shell-command-projection-dispatch.test.cjs — 31 behavioral tests, node:test + node:assert/strict, no source-grep`
 
-## Session learnings
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.scope=PR #3464; gsd-build/get-shit-done only — all gh checks with --repo gsd-build/get-shit-done`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.invariant=review completion requires three gates: CI required checks green AND CodeRabbit green AND GraphQL unresolved review threads = 0`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.failure-mode-1=mergeStateStatus=DIRTY can exist even when CodeRabbit + thread count are clean; remediation = rebase/replay onto latest origin/main before treating PR as merge-ready`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.failure-mode-2=primary worktree rebase blocked by unrelated untracked files; remediation = use isolated worktree seeded from origin/main, replay feature commits there, then push --force-with-lease to PR head`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.replay-conflict-seam=get-shit-done/bin/lib/config.cjs; keep both behaviors during conflict resolution (existing ship.pr_body_sections + workflow.human_verify_mode validations AND new review.default_reviewers normalization path)`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.post-rebase-drift-classes=[tests/config-schema-sdk-parity.test.cjs (SDK schema parity), tests/inventory-counts.test.cjs (docs inventory counts), tests/inventory-manifest-sync.test.cjs (inventory manifest sync), tests/bug-2543-gsd-slash-namespace.test.cjs (slash namespace invariant)]`
+`SESSION.2026-05-13.CODERABBIT-GUARD-MERGE-RECOVERY.concrete-fixes=[add review.default_reviewers to sdk/src/query/config-schema.ts, add review-reviewer-selection.cjs row + count update in docs/INVENTORY.md, regenerate docs/INVENTORY-MANIFEST.json, replace legacy /gsd-review with canonical /gsd:review in source comments]`
 
-### 2026-05-13 — Shell Command Projection Module expansion (issues #3465–#3468)
-
-- scope: `shell-command-projection.cjs` extended to own subprocess dispatch + platform file I/O
-- ADR-0009 "does not execute" constraint superseded; ADR-0010 File Operation Engine superseded
-- new exports: `execGit`, `execNpm`, `execTool`, `probeTty`, `normalizeContent`, `platformWriteSync`, `platformReadSync`, `platformEnsureDir`
-- result shape invariant: all `exec*` return `{ exitCode, stdout, stderr }`; never throw on non-zero exit
-- platform policy owned at seam: `shell: process.platform === 'win32'` lives only in `execNpm`; `probeTty` returns `null` on Windows
-- normalization policy: `platformWriteSync` owns full `normalizeMd` for `.md`; CRLF→LF + trailing newline for all others; callers must not pre-call `normalizeMd`
-- `normalizeContent(filePath, content)` is the pure typed surface tests assert on — no file content read-back in tests (CONTRIBUTING.md rule)
-- `_normalizeMd` is re-implemented inline (not imported from `core.cjs`) to avoid circular dep
-- `atomicWriteFileSync`, `safeReadFile`, `normalizeMd` remain in `core.cjs` exports until Phase 4 (#3468)
-- phase gate: no call site migration until Phase 1 branch merged; Phase 2 (#3466) targets 6 subprocess files; Phase 3 (#3467) targets 15 fs files (215 call sites); Phase 4 (#3468) removes compat exports
-- branch: `feat/3465-shell-projection-platform-io-seam`
-- test file: `tests/shell-command-projection-dispatch.test.cjs` — 31 behavioral tests, node:test + node:assert/strict, no source-grep
-
-### 2026-05-13 — CodeRabbit guard + merge recovery (PR #3464)
-
-- scope: `gsd-build/get-shit-done` only; run all `gh` checks with `--repo gsd-build/get-shit-done`.
-- invariant: review completion requires all three gates:
-  - CI required checks green
-  - CodeRabbit green
-  - GraphQL unresolved review threads = `0`
-- failure mode: `mergeStateStatus=DIRTY` can exist even when CodeRabbit + thread count are clean.
-  - remediation: rebase/replay onto latest `origin/main` before treating PR as merge-ready.
-- failure mode: primary worktree rebase blocked by unrelated untracked files.
-  - remediation: use isolated worktree seeded from `origin/main`, replay feature commits there, then `push --force-with-lease` to PR head.
-- replay conflict learned seam:
-  - file: `get-shit-done/bin/lib/config.cjs`
-  - keep both behaviors during conflict resolution:
-    - existing `ship.pr_body_sections` and `workflow.human_verify_mode` validations
-    - new `review.default_reviewers` normalization path
-- post-rebase CI drift classes to verify immediately:
-  - SDK schema parity (`tests/config-schema-sdk-parity.test.cjs`)
-  - docs inventory counts (`tests/inventory-counts.test.cjs`)
-  - inventory manifest sync (`tests/inventory-manifest-sync.test.cjs`)
-  - slash namespace invariant (`tests/bug-2543-gsd-slash-namespace.test.cjs`)
-- concrete regressions fixed in this session:
-  - add `review.default_reviewers` to `sdk/src/query/config-schema.ts`
-  - add `review-reviewer-selection.cjs` row + count update in `docs/INVENTORY.md`
-  - regenerate `docs/INVENTORY-MANIFEST.json`
-  - replace legacy `/gsd-review` mention with canonical `/gsd:review` in source comments
-
-### 2026-05-13 — Phase 1 rebase + PR open (#3465)
-
-- branch: `feat/3465-shell-projection-platform-io-seam`; PR: #3470 on `gsd-build/get-shit-done`
-- rebase pattern: 4 sibling-branch commits (#3464) were skipped as "patch contents already upstream" — expected when a feature branch is cut before a sibling merges to main
-- untracked files block rebase: `git stash --include-untracked` before `git rebase origin/main`
-- add/add conflict resolution: when HEAD side is empty (feature didn't have the file) and ours has the content, `git checkout --theirs <file>` is correct
-- content conflict resolution: `git checkout --ours CONTEXT.md` + manual append of our new sections — preserves main's full content while adding our additions
-- `docs/research/` was untracked pre-rebase but came in from main during rebase — already tracked, no action required
-- force-push after rebase: `git push --force-with-lease origin <branch>` (not `--force`)
-- stash pop can fail if main brought in the same files: drop the stash with `git stash drop` when files are already present
-- PR hook requires reading all listed contribution files before `gh pr create` will execute — including `pull_request_template.md`, all typed templates, and all issue templates
-- changeset type for seam additions: `Changed` (not `Added`) — expands existing module, not a new standalone feature
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.scope=feat/3465-shell-projection-platform-io-seam → PR #3470 on gsd-build/get-shit-done`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.rebase-pattern=4 sibling-branch commits (#3464) skipped as "patch contents already upstream" — expected when feature branch cut before sibling merges to main`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.untracked-block=git stash --include-untracked before git rebase origin/main`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.add-add-conflict=when HEAD side empty (feature didn't have file) and ours has content, git checkout --theirs <file> is correct`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.content-conflict=git checkout --ours CONTEXT.md + manual append of new sections — preserves main's full content while adding our additions`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.untracked-becoming-tracked=docs/research/ was untracked pre-rebase but came in from main during rebase — already tracked, no action required`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.force-push=git push --force-with-lease origin <branch> (NOT --force)`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.stash-pop-fail=if main brought in same files, drop stash with git stash drop`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.pr-hook-requires-reads=PR hook requires reading all listed contribution files before gh pr create executes — including pull_request_template.md, all typed templates, and all issue templates`
+`SESSION.2026-05-13.PHASE-1-REBASE-PR-OPEN.changeset-type-for-seam=Changed (NOT Added) — expands existing module, not a new standalone feature`
