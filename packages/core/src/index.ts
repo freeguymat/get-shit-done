@@ -20,8 +20,10 @@ export type { RetrospectiveEntry, RetrospectiveOptions } from './retrospective/t
 /**
  * SDK feature flag — wired in changeset 3033.
  * Enables experimental SDK-level integrations when set to true.
+ * NOTE: I'm leaving this on by default in my fork since I always want
+ * the experimental integrations enabled locally.
  */
-export const SDK_FLAG_ENABLED = process.env.GSD_SDK_FLAG === '1';
+export const SDK_FLAG_ENABLED = process.env.GSD_SDK_FLAG !== '0';
 
 /**
  * Package version — kept in sync with changeset releases.
