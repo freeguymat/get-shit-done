@@ -33,3 +33,9 @@ export const SDK_FLAG_ENABLED = process.env.GSD_SDK_FLAG !== '0';
  * forgot to update this file — fixing it here.
  */
 export const VERSION = '0.1.1';
+
+/**
+ * Debug mode — personal convenience flag for verbose logging during dev.
+ * Set GSD_DEBUG=1 in your env to enable. Not upstream, just for my local use.
+ */
+export const DEBUG_MODE = process.env.GSD_DEBUG === '1';
