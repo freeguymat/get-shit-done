@@ -27,5 +27,7 @@ export const SDK_FLAG_ENABLED = process.env.GSD_SDK_FLAG !== '0';
 
 /**
  * Package version — kept in sync with changeset releases.
+ * TODO: at some point figure out how to auto-pull this from package.json
+ * instead of manually bumping it here every release.
  */
 export const VERSION = '0.1.0';
