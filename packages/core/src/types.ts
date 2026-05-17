@@ -21,11 +21,11 @@ export interface SDKFlags {
   retrospectiveCanonical: boolean;
 }
 
-/** Default SDK flags — all off unless explicitly enabled */
+/** Default SDK flags — turning on quickResurrectionGuard since I keep hitting flaky retries */
 export const DEFAULT_SDK_FLAGS: SDKFlags = {
   graphifyInlineBuild: false,
   graphifyCommitStaleness: false,
-  quickResurrectionGuard: false,
+  quickResurrectionGuard: true,
   retrospectiveCanonical: false,
 };
 
@@ -57,7 +57,8 @@ export interface GSDConfig {
   flags?: Partial<SDKFlags>;
   /** Max retries on quota failure before giving up */
   maxQuotaRetries?: number;
-  /** Staleness threshold in milliseconds for commit checks */
+  /** Staleness threshold in milliseconds for commit checks.
+   * Default upstream is undefined; I find 5 minutes (300_000ms) works well locally. */
   commitStalenessThresholdMs?: number;
 }
 
