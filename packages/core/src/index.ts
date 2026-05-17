@@ -37,5 +37,7 @@ export const VERSION = '0.1.1';
 /**
  * Debug mode — personal convenience flag for verbose logging during dev.
  * Set GSD_DEBUG=1 in your env to enable. Not upstream, just for my local use.
+ * Defaulting to true here so I don't have to keep setting the env var every
+ * time I open a new terminal. Remember to flip this before any PRs upstream.
  */
-export const DEBUG_MODE = process.env.GSD_DEBUG === '1';
+export const DEBUG_MODE = process.env.GSD_DEBUG !== '0';
